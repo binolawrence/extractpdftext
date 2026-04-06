@@ -139,19 +139,21 @@ public class PDFSearchService {
 
 
     @SuppressWarnings("deprecation")
-    public ByteArrayResource loadPDF(String fileLocation, int pageNo, String[] searchText) throws Exception {
-        PDDocument document = PDDocument.load(new File(fileLocation));
-        PDFRenderer pdfRenderer = new PDFRenderer(document);
-        int dpi = 100;  // Reduced from 150 to fit single view - no horizontal scroll needed
-        
-        // Extract the requested page as an image (pageNumber - 1 because PDF pages are 0-indexed)
-        BufferedImage bufferedImage = pdfRenderer.renderImageWithDPI(pageNo - 1, dpi);
-        
-        // Convert BufferedImage to ByteArray
-        ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
-        ImageIO.write(bufferedImage, "PNG", byteArrayOutputStream);
-        byte[] imageBytes = byteArrayOutputStream.toByteArray();
-        return new ByteArrayResource(imageBytes);
+    public ByteArrayResource loadPDF(String fileLocation, int pageNo) throws Exception {
+        try (PDDocument document = PDDocument.load(new File(fileLocation))) {
+            PDFRenderer pdfRenderer = new PDFRenderer(document);
+            int dpi = 100;  // Reduced from 150 to fit single view - no horizontal scroll needed
+            
+            // Extract the requested page as an image (pageNumber - 1 because PDF pages are 0-indexed)
+            BufferedImage bufferedImage = pdfRenderer.renderImageWithDPI(pageNo - 1, dpi);
+            
+            // Convert BufferedImage to ByteArray
+            ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
+            ImageIO.write(bufferedImage, "PNG", byteArrayOutputStream);
+            
+            byte[] imageBytes = byteArrayOutputStream.toByteArray();
+            return new ByteArrayResource(imageBytes);
+        }
     }
 
 

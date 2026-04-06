@@ -25,9 +25,9 @@ public class PDFController {
     }
 
     @GetMapping("/loadPDF")
-    public ResponseEntity<ByteArrayResource> loadPDF(@RequestParam String fileName, @RequestParam int pageNo,@RequestParam String[] searchText) throws Exception {
+    public ResponseEntity<ByteArrayResource> loadPDF(@RequestParam String fileName, @RequestParam int pageNo) throws Exception {
         System.out.println("searchv1 searching ");
-        ByteArrayResource byteArrayResource=searchService.loadPDF(fileName,pageNo,searchText);
+        ByteArrayResource byteArrayResource=searchService.loadPDF(fileName,pageNo);
         return ResponseEntity.ok()
                 .contentType(MediaType.IMAGE_PNG)
                 .body(byteArrayResource);
