@@ -1,0 +1,74 @@
+version: '3.8'
+
+services:
+  # Spring Boot Backend Service
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: extractpdftext-backend
+    ports:
+      - "8080:8080"
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - SERVER_PORT=8080
+      - LOGGING_LEVEL_ROOT=INFO
+    networks:
+      - extractpdf-network
+    volumes:
+      # Persist PDF files and indexes
+      - pdf-storage:/app/pdf-storage
+      - lucene-index:/app/lucene-index
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # React Frontend Service (if you have one)
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: extractpdftext-frontend
+    ports:
+      - "3000:3000"
+    environment:
+      - REACT_APP_API_URL=http://backend:8080
+      - NODE_ENV=production
+    networks:
+      - extractpdf-network
+    depends_on:
+      backend:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # Nginx Reverse Proxy (Optional - for production)
+  nginx:
+    image: nginx:alpine
+    container_name: extractpdftext-nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./ssl:/etc/nginx/ssl:ro
+    networks:
+      - extractpdf-network
+    depends_on:
+      - backend
+      - frontend
+    restart: unless-stopped
+
+networks:
+  extractpdf-network:
+    driver: bridge
+
+volumes:
+  pdf-storage:
+    driver: local
+  lucene-index:
+    driver: local
+

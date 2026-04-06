@@ -1,0 +1,47 @@
+# Git
+.git
+.gitignore
+.gitattributes
+
+# IDE
+.idea
+.vscode
+*.iml
+*.iws
+*.ipr
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# Build artifacts
+target/
+build/
+dist/
+node_modules/
+
+# Maven
+.m2
+.mvn/wrapper/maven-wrapper.jar
+.mvn/wrapper/maven-wrapper.properties
+
+# Logs
+*.log
+hs_err_*.log
+replay_*.log
+
+# Project specific
+index-folder/
+lucene-index/
+pdf-storage/
+
+# Docker
+Dockerfile
+docker-compose.yml
+.dockerignore
+nginx.conf
+
+# Documentation
+*.md
+
