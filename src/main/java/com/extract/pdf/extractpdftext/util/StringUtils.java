@@ -468,17 +468,19 @@ public class StringUtils {
             return null;
         }
 
-        // Pattern: fixedString + optional spaces + : + optional spaces + (custom regex pattern)
+        // Pattern: fixedString + optional spaces + : + optional spaces + (custom regex pattern with capturing group)
         // Escaping special regex characters in fixedString
         String escapedFixedString = Pattern.quote(fixedString);
-        String pattern = escapedFixedString + numberPattern;
+        // Pattern to match: fixedString + optional spaces + colon + optional spaces + (numberPattern) + word boundary or whitespace
+        // Using word boundary or space after the pattern to ensure exact match
+        String pattern = escapedFixedString + "\\s*:\\s*(" + numberPattern + ")(?=\\s|$)";
         
         Pattern regex = Pattern.compile(pattern);
         Matcher matcher = regex.matcher(input);
 
         if (matcher.find()) {
             String matchedValue = matcher.group(1);
-            return fixedString + " " + matchedValue;
+            return fixedString + ":" + matchedValue;
         }
 
         return null; // No match found

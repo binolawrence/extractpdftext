@@ -931,11 +931,11 @@ public class StringUtilsTest {
     @Test
     @DisplayName("Should extract fixed string with custom pattern - 1-3 digits")
     void testExtractStringWithPattern_ThreeDigits() {
-        String input = "TAMBARAM , e Distriot : CHENGALPATTU ,";
-        String result = StringUtils.extractStringWithPattern(input, "Distriot :", "\\s,");
+        String input = "District: 123 State: 45 City: 1";
+        String result = StringUtils.extractStringWithPattern(input, "District", "\\d{1,3}");
 
         assertNotNull(result, "Result should not be null");
-        assertEquals("Distriot CHENGALPATTU", result);
+        assertEquals("District:123", result);
     }
 
     @Test
