@@ -1,5 +1,6 @@
 package com.extract.pdf.extractpdftext.service;
 
+import com.extract.pdf.extractpdftext.config.PathConfig;
 import com.extract.pdf.extractpdftext.pojo.SearchResult;
 import com.extract.pdf.extractpdftext.pojo.Voter;
 import com.extract.pdf.extractpdftext.util.StringUtils;
@@ -15,6 +16,7 @@ import org.apache.lucene.store.Directory;
 import org.apache.lucene.store.FSDirectory;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.rendering.PDFRenderer;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.stereotype.Service;
 
@@ -34,6 +36,9 @@ import java.util.regex.Pattern;
 @Service
 public class PDFSearchService {
 
+    @Autowired
+    private PathConfig pathConfig;
+
     // Enum for predefined label constants
     public enum Label {
         NAME("Name:"),
@@ -51,8 +56,7 @@ public class PDFSearchService {
         }
     }
 
-    private final String INDEX_DIR = "C:\\Users\\bfrancis\\projects\\lucene-index";
-    
+
     private String fileName;
 
     // Regex patterns for common ID formats
@@ -77,7 +81,7 @@ public class PDFSearchService {
     @SuppressWarnings("deprecation")
     public List<Voter> search(String name, String fathername, String streetName) throws Exception {
 
-        Directory dir = FSDirectory.open(Paths.get(INDEX_DIR));
+        Directory dir = FSDirectory.open(Paths.get(pathConfig.getLuceneIndexDir()));
 
         IndexReader reader = DirectoryReader.open(dir);
         IndexSearcher searcher = new IndexSearcher(reader);
@@ -173,7 +177,7 @@ public class PDFSearchService {
     @SuppressWarnings("deprecation")
     private Voter getStreetAndPollingStationDetails(String fileName, Voter voter) throws Exception {
 
-        Directory dir = FSDirectory.open(Paths.get(INDEX_DIR));
+        Directory dir = FSDirectory.open(Paths.get(pathConfig.getLuceneIndexDir()));
 
         IndexReader reader = DirectoryReader.open(dir);
         IndexSearcher searcher = new IndexSearcher(reader);

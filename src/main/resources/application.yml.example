@@ -1,0 +1,52 @@
+# ================================================================================
+# Spring Boot Application Configuration (YAML Format)
+# ================================================================================
+# This file demonstrates YAML-based configuration
+# To use YAML instead of .properties:
+#   1. Rename application.properties to application.properties.bak
+#   2. Rename this file to application.yml
+# ================================================================================
+
+spring:
+  application:
+    name: extractpdftext
+
+  # Spring Boot DevTools Configuration
+  devtools:
+    restart:
+      enabled: true
+      poll-interval: 2000ms
+      quiet-period: 1000ms
+    livereload:
+      enabled: true
+
+# ================================================================================
+# Logging Configuration
+# ================================================================================
+logging:
+  level:
+    org.springframework.boot.devtools: INFO
+
+# ================================================================================
+# File Path Configuration
+# ================================================================================
+# PDF Documents Directory - Path where PDF files are stored for indexing
+# Can be overridden by environment variable: PDF_DOCS_DIR
+# Default: C:\Users\bfrancis\projects\pdfdocs
+app:
+  pdf:
+    docs-dir: C:\Users\bfrancis\projects\pdfdocs
+
+  # Lucene Index Directory - Path where Lucene search index is stored
+  # Can be overridden by environment variable: LUCENE_INDEX_DIR
+  # Default: C:\Users\bfrancis\projects\lucene-index
+  lucene:
+    index-dir: C:\Users\bfrancis\projects\lucene-index
+
+# ================================================================================
+# Configuration Priority (highest to lowest):
+# 1. Environment variables (PDF_DOCS_DIR, LUCENE_INDEX_DIR)
+# 2. application.yml or application.properties
+# 3. Hard-coded defaults in PathConfig class
+# ================================================================================
+
