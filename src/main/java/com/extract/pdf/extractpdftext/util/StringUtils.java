@@ -1,5 +1,8 @@
 package com.extract.pdf.extractpdftext.util;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -8,6 +11,8 @@ import java.util.regex.Pattern;
 
 public class StringUtils {
 
+    private static final Logger logger = LoggerFactory.getLogger(StringUtils.class);
+
     /**
      * Fetches the complete key-value pair by searching for a value
      * @param input The input string containing key-value pairs
@@ -15,6 +20,7 @@ public class StringUtils {
      * @return The complete key-value pair (e.g., "Father Name: Jeyakumar")
      */
     public static String fetchKeyValueByValue(String input, String searchValue) {
+        logger.debug("Searching for value '{}' in input", searchValue);
         Pattern pattern = Pattern.compile("([^:]+): ([^ -]+)");
         Matcher matcher = pattern.matcher(input);
 
@@ -23,10 +29,12 @@ public class StringUtils {
             String value = matcher.group(2).trim();
 
             if (value.equals(searchValue)) {
+                logger.debug("Found matching key-value pair: {} = {}", key, value);
                 return key + ": " + value;
             }
         }
 
+        logger.debug("No matching key-value pair found for value: {}", searchValue);
         return null; // Return null if value not found
     }
 
@@ -35,6 +43,7 @@ public class StringUtils {
     // key: Assembly Constituency No and Name, value: 31-TAMBARAM
     //key PartNo, value: 19
     public static List<String> fetchKeyValuePairs(String input) {
+        logger.debug("Fetching key-value pairs from input");
         Pattern pattern = Pattern.compile("([^:]+): ([^ -]+)");
         Matcher matcher = pattern.matcher(input);
         List<String> keyValuePairs = new ArrayList<>();
@@ -43,22 +52,26 @@ public class StringUtils {
             String key = matcher.group(1).trim();
             String value = matcher.group(2).trim();
             String keyValuePair = key+":"+value;
-            System.out.println("Key: " + key + ", Value: " + value);
+            logger.trace("Key: {}, Value: {}", key, value);
             keyValuePairs.add(keyValuePair);
         }
+        logger.debug("Extracted {} key-value pairs", keyValuePairs.size());
         return keyValuePairs;
     }
 
 
     public static String fetchEpicNo(String input, String searchValue) {
+        logger.debug("Fetching EPIC number - input: {}, search value: {}", input, searchValue);
         Pattern pattern = Pattern.compile("^[a-zA-Z]{3}\\d{7}$");
         Matcher matcher = pattern.matcher(input);
 
         while (matcher.find()&&matcher.group().trim().equals(searchValue)) {
             String key = matcher.group().trim();
+            logger.debug("Found EPIC number: {}", key);
             return key;
         }
 
+        logger.debug("No EPIC number found");
         return null; // Return null if value not found
     }
 
@@ -98,13 +111,16 @@ public class StringUtils {
      * @return A Map.Entry with key and value, or null if not found
      */
     public static java.util.Map.Entry<String, String> extractKeyValuePair(String input, String keyToSearch, String valueToSearch, String delimiters) {
+        logger.debug("Extracting key-value pair - Key: {}, Value: {}, Delimiters: {}", keyToSearch, valueToSearch, delimiters);
         if (input == null || input.isEmpty()) {
+            logger.warn("Input is null or empty");
             return null;
         }
 
         // Convert delimiters to regex pattern and split
         String delimiterPattern = convertDelimitersToRegex(delimiters);
         String[] entries = input.split(delimiterPattern);
+        logger.debug("Split input into {} entries", entries.length);
 
         for (String entry : entries) {
             entry = entry.trim();
@@ -122,11 +138,13 @@ public class StringUtils {
 
                 // Check if this entry matches our search criteria
                 if (key.equalsIgnoreCase(keyToSearch) && value.equalsIgnoreCase(valueToSearch)) {
+                    logger.debug("Found matching pair: {} = {}", key, value);
                     return new java.util.AbstractMap.SimpleEntry<>(key, value);
                 }
             }
         }
 
+        logger.debug("No matching key-value pair found");
         return null; // Return null if not found
     }
 

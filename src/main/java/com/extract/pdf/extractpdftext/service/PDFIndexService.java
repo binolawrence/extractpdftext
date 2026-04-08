@@ -8,6 +8,8 @@ import org.apache.lucene.index.IndexWriter;
 import org.apache.lucene.index.IndexWriterConfig;
 import org.apache.lucene.store.Directory;
 import org.apache.lucene.store.FSDirectory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -17,46 +19,66 @@ import java.nio.file.Paths;
 @Service
 public class PDFIndexService {
 
+    private static final Logger logger = LoggerFactory.getLogger(PDFIndexService.class);
+
     @Autowired
     private PathConfig pathConfig;
 
     public void indexPDF(File file, String content) throws Exception {
+        logger.info("Indexing PDF file: {}", file.getName());
+        try {
+            Directory dir = FSDirectory.open(Paths.get(pathConfig.getLuceneIndexDir()));
+            logger.debug("Opened Lucene index directory: {}", pathConfig.getLuceneIndexDir());
+            
+            IndexWriterConfig config = new IndexWriterConfig(new StandardAnalyzer());
+            IndexWriter writer = new IndexWriter(dir, config);
+            logger.debug("Created IndexWriter for file: {}", file.getName());
 
-        Directory dir = FSDirectory.open(Paths.get(pathConfig.getLuceneIndexDir()));
-        IndexWriterConfig config =
-                new IndexWriterConfig(new StandardAnalyzer());
+            Document doc = new Document();
+            doc.add(new TextField("content", content, Field.Store.NO));
+            doc.add(new StringField("filename", file.getName(), Field.Store.YES));
 
-        IndexWriter writer = new IndexWriter(dir, config);
+            writer.addDocument(doc);
+            logger.debug("Document added to index: {}", file.getName());
 
-        Document doc = new Document();
-
-        doc.add(new TextField("content", content, Field.Store.NO));
-        doc.add(new StringField("filename", file.getName(), Field.Store.YES));
-
-        writer.addDocument(doc);
-
-        writer.close();
+            writer.close();
+            logger.info("Successfully indexed PDF file: {}", file.getName());
+        } catch (Exception e) {
+            logger.error("Error indexing PDF file: {}", file.getName(), e);
+            throw e;
+        }
     }
 
+    public void indexPDF(String text, String fileName, String filePath, int page) throws Exception {
+        logger.info("Indexing PDF content - File: {}, Page: {}", fileName, page);
+        try {
+            if (text == null || text.trim().isEmpty()) {
+                logger.debug("Skipping indexing - Empty text content for file: {}, page: {}", fileName, page);
+                return;
+            }
 
-    public void indexPDF(String text,String fileName,String filePath,int page) throws Exception {
+            Directory dir = FSDirectory.open(Paths.get(pathConfig.getLuceneIndexDir()));
+            logger.debug("Opened Lucene index directory: {}", pathConfig.getLuceneIndexDir());
+            
+            IndexWriterConfig config = new IndexWriterConfig(new StandardAnalyzer());
+            IndexWriter writer = new IndexWriter(dir, config);
+            logger.debug("Created IndexWriter for file: {} at page: {}", fileName, page);
 
-        Directory dir = FSDirectory.open(Paths.get(pathConfig.getLuceneIndexDir()));
-        IndexWriterConfig config =
-                new IndexWriterConfig(new StandardAnalyzer());
+            Document doc = new Document();
+            doc.add(new TextField("content", text, Field.Store.YES));
+            doc.add(new StringField("fileName", fileName, Field.Store.YES));
+            doc.add(new StoredField("filePath", filePath));
+            doc.add(new IntPoint("pageNumber", page));
+            doc.add(new StoredField("pageNumberStored", page));
 
-        IndexWriter writer = new IndexWriter(dir, config);
-
-        Document doc = new Document();
-
-        doc.add(new TextField("content", text, Field.Store.YES));
-        doc.add(new StringField("fileName", fileName, Field.Store.YES));
-        doc.add(new StoredField("filePath", filePath));
-        doc.add(new IntPoint("pageNumber", page));
-        doc.add(new StoredField("pageNumberStored", page));
-        if (text != null && !text.trim().isEmpty()) {
             writer.addDocument(doc);
+            logger.debug("Document added to index - File: {}, Page: {}", fileName, page);
+
+            writer.close();
+            logger.info("Successfully indexed PDF content - File: {}, Page: {}, Text length: {}", fileName, page, text.length());
+        } catch (Exception e) {
+            logger.error("Error indexing PDF content - File: {}, Page: {}", fileName, page, e);
+            throw e;
         }
-        writer.close();
     }
 }

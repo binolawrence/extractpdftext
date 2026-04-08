@@ -16,6 +16,8 @@ import org.apache.lucene.store.Directory;
 import org.apache.lucene.store.FSDirectory;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.rendering.PDFRenderer;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.stereotype.Service;
@@ -35,6 +37,8 @@ import java.util.regex.Pattern;
 
 @Service
 public class PDFSearchService {
+
+    private static final Logger logger = LoggerFactory.getLogger(PDFSearchService.class);
 
     @Autowired
     private PathConfig pathConfig;

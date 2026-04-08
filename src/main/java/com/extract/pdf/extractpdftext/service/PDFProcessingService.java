@@ -5,6 +5,8 @@ import com.extract.pdf.extractpdftext.util.PDFTextExtractor;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.rendering.PDFRenderer;
 import org.apache.pdfbox.text.PDFTextStripper;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -13,6 +15,8 @@ import java.io.File;
 
 @Service
 public class PDFProcessingService {
+
+    private static final Logger logger = LoggerFactory.getLogger(PDFProcessingService.class);
 
     @Autowired
     private PDFTextExtractor extractor;
@@ -28,28 +32,35 @@ public class PDFProcessingService {
 
 
     public void processPDF(File file) throws Exception {
+        logger.info("Starting PDF processing for file: {}", file.getName());
+        try {
+            PDDocument pdf = PDDocument.load(file);
+            logger.debug("PDF document loaded: {}", file.getAbsolutePath());
 
+            PDFTextStripper stripper = new PDFTextStripper();
+            int totalPages = pdf.getNumberOfPages();
+            logger.info("PDF has {} pages", totalPages);
 
-        PDDocument pdf = PDDocument.load(file);
+            for (int page = 1; page <= totalPages; page++) {
+                logger.debug("Processing page {} of {}", page, totalPages);
+                stripper.setStartPage(page);
+                stripper.setEndPage(page);
 
-        PDFTextStripper stripper = new PDFTextStripper();
-//        PDFRenderer pdfRenderer = new PDFRenderer(pdf);
-//        int dpi=150;
-
-
-        for (int page = 1; page <= pdf.getNumberOfPages(); page++) {
-            stripper.setStartPage(page);
-            stripper.setEndPage(page);
-            //BufferedImage bufferedImage = pdfRenderer.renderImageWithDPI(page,dpi);
-
-            String text = stripper.getText(pdf);
-            if (text == null || text.isEmpty()) {
-                System.out.println("Applying OCR to scanned PDF: " + file.getName());
-                //text = ocrProcessor.extractTextFromPdfWithOcr(file.getAbsolutePath());
-                text="dummy text";
+                String text = stripper.getText(pdf);
+                if (text == null || text.isEmpty()) {
+                    logger.warn("No text extracted from page {}. Applying OCR to scanned PDF: {}", page, file.getName());
+                    text = "dummy text";
+                } else {
+                    logger.debug("Text extracted from page {}. Length: {}", page, text.length());
+                }
+                indexService.indexPDF(text, file.getName(), file.getAbsolutePath(), page);
             }
-            indexService.indexPDF(text, file.getName(), file.getAbsolutePath(), page);
+            pdf.close();
+            logger.info("PDF processing completed successfully for file: {}", file.getName());
+        } catch (Exception e) {
+            logger.error("Error processing PDF file: {}", file.getName(), e);
+            throw e;
         }
-        pdf.close();
     }
 }
+
