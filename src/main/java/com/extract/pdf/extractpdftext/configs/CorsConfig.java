@@ -20,7 +20,7 @@ public class CorsConfig {
             public void addCorsMappings(CorsRegistry registry) {
                 logger.debug("Adding CORS mappings for localhost:5173");
                 registry.addMapping("/**") // allow all endpoints
-                        .allowedOrigins("http://localhost:5173")
+                        .allowedOrigins("http://localhost:80","http://localhost:5173")
                         .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
                         .allowedHeaders("*");
                 logger.info("CORS configuration completed");
