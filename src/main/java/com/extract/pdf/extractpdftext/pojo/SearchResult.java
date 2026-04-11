@@ -8,6 +8,10 @@ public class SearchResult {
     private String fileName;
     private int pageNo;
     private String fileLocation;
+    String pollingStation;
+    String streetName;
+    String name;
+    String relativeName;
 
     public SearchResult() {
     }

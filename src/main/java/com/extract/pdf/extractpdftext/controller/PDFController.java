@@ -1,5 +1,6 @@
 package com.extract.pdf.extractpdftext.controller;
 
+import com.extract.pdf.extractpdftext.pojo.SearchResult;
 import com.extract.pdf.extractpdftext.pojo.Voter;
 import com.extract.pdf.extractpdftext.service.PDFSearchService;
 import org.slf4j.Logger;
@@ -23,10 +24,10 @@ public class PDFController {
     private PDFSearchService searchService;
 
     @GetMapping("/search")
-    public List<Voter> search(@RequestParam String name, @RequestParam String fathername, @RequestParam(required = false) String husbandname) throws Exception {
-          logger.info("Search endpoint called - Name: {}, FatherName: {}, HusbandName: {}", name, fathername, husbandname);
+    public List<SearchResult> search(@RequestParam String name, @RequestParam(required = false) String relativeName, @RequestParam(required = false) String streetName) throws Exception {
+          logger.info("Search endpoint called - Name: {}, RelativeName: {}, StreetName: {}", name, relativeName, streetName);
           logger.debug("Invoking search service");
-          List<Voter> results = searchService.search(name, fathername, husbandname);
+          List<SearchResult> results = searchService.search(name, relativeName, streetName);
           logger.info("Search completed. Found {} results", results.size());
           return results;
     }
