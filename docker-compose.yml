@@ -19,7 +19,7 @@ services:
     expose:
       - "80"  # Also exposed internally for frontend containers
     healthcheck:
-      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/health"]
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/actuator/health"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -40,7 +40,7 @@ services:
       - INSTANCE_NAME=app1
     volumes:
       - ./pdfdocs:/app/pdfdocs:ro
-      - ./lucene-index:/app/lucene-index:ro
+      - ./lucene-index:/app/lucene-index:rw
       - ./logs/app1:/app/logs:rw
     networks:
       - extractpdf-network
@@ -68,7 +68,7 @@ services:
       - INSTANCE_NAME=app2
     volumes:
       - ./pdfdocs:/app/pdfdocs:ro
-      - ./lucene-index:/app/lucene-index:ro
+      - ./lucene-index:/app/lucene-index:rw
       - ./logs/app2:/app/logs:rw
     networks:
       - extractpdf-network
@@ -96,7 +96,7 @@ services:
       - INSTANCE_NAME=app3
     volumes:
       - ./pdfdocs:/app/pdfdocs:ro
-      - ./lucene-index:/app/lucene-index:ro
+      - ./lucene-index:/app/lucene-index:rw
       - ./logs/app3:/app/logs:rw
     networks:
       - extractpdf-network
