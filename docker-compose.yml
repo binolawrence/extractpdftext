@@ -40,14 +40,14 @@ services:
       - INSTANCE_NAME=app1
     volumes:
       - ./pdfdocs:/app/pdfdocs:ro
-      - ./lucene-index:/app/lucene-index:rw
+      - ./lucene-index:/app/lucene-index:ro
       - ./logs/app1:/app/logs:rw
     networks:
       - extractpdf-network
     expose:
       - "8080"
     healthcheck:
-      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8080/health"]
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8080/actuator/health"]
       interval: 30s
       timeout: 10s
       retries: 3
