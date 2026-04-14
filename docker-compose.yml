@@ -19,7 +19,7 @@ services:
     expose:
       - "80"  # Also exposed internally for frontend containers
     healthcheck:
-      test: [ "CMD", "wget", "--quiet", "--tries=1", "--spider", "http://127.0..0.1/health" ]
+      test: [ "CMD", "wget", "--quiet", "--tries=1", "--spider", "http://mycommune.org" ]
       interval: 30s
       timeout: 10s
       retries: 3
