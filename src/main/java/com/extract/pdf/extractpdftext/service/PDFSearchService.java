@@ -361,7 +361,7 @@ public class PDFSearchService {
 
                 if (i == 0) {
                     // Check if term matches Name label (and not HusbandName or FatherName)
-                    if (matchesLabel(lowerLine, term, Label.NAME)) {
+                    if (!(matchesRelativeLabel(lowerLine, terms.get(i), Label.FATHER_NAME)) && !(matchesRelativeLabel(lowerLine, terms.get(i), Label.HUSBAND_NAME)) && !(matchesRelativeLabel(lowerLine, terms.get(i), Label.MOTHER_NAME))&&matchesLabel(lowerLine, term, Label.NAME)) {
                         voter = new Voter();
                         //Extract the name
                         Pattern pattern = Pattern.compile("Nam[a-z]*\\s*:\\s*(.*?)(?=Nam[a-z]*\\s*:|$)", Pattern.CASE_INSENSITIVE);
