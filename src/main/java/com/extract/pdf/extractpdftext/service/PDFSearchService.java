@@ -23,16 +23,12 @@ import org.springframework.core.io.ByteArrayResource;
 import org.springframework.stereotype.Service;
 
 import javax.imageio.ImageIO;
-import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.nio.file.Paths;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 @Service
@@ -47,8 +43,8 @@ public class PDFSearchService {
     public enum Label {
         NAME("Name:"),
         HUSBAND_NAME("Husband Name:"),
-        FATHER_NAME("Father Name:");
-
+        FATHER_NAME("Father Name:"),
+        MOTHER_NAME("Mother Name:");
         private final String value;
 
         Label(String value) {
@@ -114,32 +110,40 @@ public class PDFSearchService {
         TopDocs results = searcher.search(query, 20);
         for (ScoreDoc sd : results.scoreDocs) {
             Document d = searcher.doc(sd.doc);
-            SearchResult searchResult = new SearchResult();
 
             fileName = d.get("fileName");
             String content = d.get("content");
             System.out.println("content: " + content);
             int page = Integer.parseInt(d.get("pageNumberStored"));
             String fileLocation = d.get("filePath");
-            searchResult.setFileLocation(fileLocation);
-            searchResult.setPageNo(page);
-            searchResult.setFileName(fileName);
-            searchResult.setName(name);
-            searchResult.setRelativeName(relativeName);
-            searchResult=getStreetPollingStationDetails(fileName, searchResult);
-            searchResult=getAddressDetails(searchResult,fileName,content);
-            System.out.println(fileName + " | Page: " + page);
-            System.out.println("fileLocation: " + fileLocation);
-            searchResults.add(searchResult);
-        }
+            //String.setFileLocation(fileLocation);
+            //searchResult.setPageNo(page);
+            //searchResult.setFileName(fileName);
+            //searchResult.setName(name);
+            //searchResult.setRelativeName(relativeName);
+            //searchResult = getStreetPollingStationDetails(fileName, searchResult);
+            //searchResult = getAddressDetails(searchResult, fileName, content);
+            //System.out.println(fileName + " | Page: " + page);
+            //System.out.println("fileLocation: " + fileLocation);
+            //searchResults.add(searchResult);
 
-            /*List<Voter> voters = getMatchingLines(content, searchText, fileName,relativeNamePresent,streetNamePresent);
+
+            List<Voter> voters = getMatchingLines(content, searchText, fileName, relativeNamePresent, streetNamePresent);
             voters.forEach(v -> {
-                v.setFileLocation(fileLocation);
-                v.setPageNo(page);
+                SearchResult searchResult = new SearchResult();
+                searchResult.setFileLocation(fileLocation);
+                searchResult.setPageNo(page);
+                searchResult.setFileName(fileName);
+                searchResult.setName(v.getName());
+                searchResult.setRelativeName(v.getRelativeName());
+                searchResult.setStreetName(v.getAddress());
+                searchResult.setPollingStation(v.getGetPollingStation());
+                searchResults.add(searchResult);
             });
-            //searchResults.add(fileName);
-            searchResults.addAll(voters);
+        }
+        //searchResults.add(fileName);
+
+            /*searchResults.addAll(voters);
             System.out.println("File: " + d.get("fileName"));
             System.out.println("Page: " + d.get("pageNumberStored"));
 
@@ -171,9 +175,9 @@ public class PDFSearchService {
         if (!new File(fileLocation).isAbsolute()) {
             fullFilePath = new File(pathConfig.getPdfDocsDir(), fileLocation).getAbsolutePath();
         }
-        
+
         logger.debug("Loading PDF from: {}", fullFilePath);
-        
+
         try (PDDocument document = PDDocument.load(new File(fullFilePath))) {
             PDFRenderer pdfRenderer = new PDFRenderer(document);
             int dpi = 100;  // Reduced from 150 to fit single view - no horizontal scroll needed
@@ -345,12 +349,12 @@ public class PDFSearchService {
         boolean relativeMatch = false;
         boolean streetMatch = false;
 
-        Voter voter = new Voter();
+        Voter voter = null;
+
 
         for (int lineCount = 0; lineCount < lines.length; lineCount++) {
 
             String lowerLine = lines[lineCount].toLowerCase();
-
 
             for (int i = 0; i < terms.size(); i++) {
                 String term = terms.get(i).toLowerCase();
@@ -358,18 +362,56 @@ public class PDFSearchService {
                 if (i == 0) {
                     // Check if term matches Name label (and not HusbandName or FatherName)
                     if (matchesLabel(lowerLine, term, Label.NAME)) {
+                        voter = new Voter();
+                        //Extract the name
+                        Pattern pattern = Pattern.compile("Nam[a-z]*\\s*:\\s*(.*?)(?=Nam[a-z]*\\s*:|$)", Pattern.CASE_INSENSITIVE);
+                        Matcher matcher = pattern.matcher(lowerLine);
+
+                        List<String> names = new ArrayList<>();
+
+                        while (matcher.find()) {
+                            names.add(matcher.group(1).trim());
+                            System.out.println("Extracted name: " + matcher.group(1).trim());
+                        }
+                        for (String name : names) {
+                            if (name.toLowerCase().contains(term.toLowerCase())) {
+                                voter.setName(name);
+                            }
+                        }
                         nameMatch = true;
-                        voter.setName(term);
-                        System.out.println("Page Content");
-                        System.out.println(content);
-                        System.out.println("Page Content End");
-                        voter.setEpicNo("EPICNO");
+
+
                         if (nameMatch && relativeNamePresent) {
                             lowerLine = lines[++lineCount].toLowerCase();
+                            System.out.println(lowerLine);
                             i = i + 1;
-                            if ((matchesRelativeLabel(lowerLine, terms.get(i), Label.FATHER_NAME)) || (matchesRelativeLabel(lowerLine, terms.get(i), Label.HUSBAND_NAME))) {
+                            if ((matchesRelativeLabel(lowerLine, terms.get(i), Label.FATHER_NAME)) || (matchesRelativeLabel(lowerLine, terms.get(i), Label.HUSBAND_NAME) ||(matchesRelativeLabel(lowerLine, terms.get(i), Label.MOTHER_NAME)))) {
 
-                                voter.setRelativeName(terms.get(i));
+                                //Extract and set the relative name
+
+                                List<String> relativeNames = new ArrayList<>();
+
+                                Pattern relativePattern = Pattern.compile(
+                                        "(?:Father|Husband|Mother)\\s*Nam[a-z]*\\s*:\\s*(.*?)(?=\\s*-|(?:Father|Husband|Mother)\\s*Nam[a-z]*\\s*:|$)",
+                                        Pattern.CASE_INSENSITIVE
+                                );
+
+                                Matcher relativeMatcher = relativePattern.matcher(lowerLine);
+
+                                while (relativeMatcher.find()) {
+                                    String value = relativeMatcher.group(1).trim();
+                                    if (!value.isEmpty()) {
+                                        relativeNames.add(value);
+                                        System.out.println("Extracted relative name: " + value);
+                                    }
+                                }
+                                for (int namesno = 0; namesno <names.size(); namesno ++) {
+                                    if (names.get(namesno).toLowerCase().contains(terms.get(0).toLowerCase())) {
+                                        System.out.println("Matching name for relative: " + names.get(namesno));
+                                        System.out.println("No: " + namesno);
+                                        voter.setRelativeName(relativeNames.get(namesno));
+                                    }
+                                }
                                 relativeMatch = true;
                                 voter.setAddress(StringUtils.extractAfterMatch(lines[1], "Section No and Name"));
                                 //voter.setAddress(lines[1]);
@@ -383,24 +425,66 @@ public class PDFSearchService {
                                 extractVoterDetailsUsingPatterns(lines[0], voter);
                                 voter = getStreetAndPollingStationDetails(fileName, voter);
                                 voter.setDistrict(StringUtils.extractAfterMatch(voter.getPart(), "Distriot :"));
+                                names.clear();
+                                relativeNames.clear();
+                                 voterMatches.add(voter);
+                                //break;
+                            }
+                        }else if (!relativeNamePresent && nameMatch) {
+                            {
+                                List<String> relativeNames = new ArrayList<>();
+                                lowerLine = lines[++lineCount].toLowerCase();
+                                Pattern relativePattern = Pattern.compile(
+                                        "(?:Father|Husband|Mother)\\s*Nam[a-z]*\\s*:\\s*(.*?)(?=\\s*-|(?:Father|Husband|Mother)\\s*Nam[a-z]*\\s*:|$)",
+                                        Pattern.CASE_INSENSITIVE
+                                );
+
+                                Matcher relativeMatcher = relativePattern.matcher(lowerLine);
+                                System.out.println("printing relative line");
+                                System.out.println(lowerLine);
+                                while (relativeMatcher.find()) {
+                                    String value = relativeMatcher.group(1).trim();
+                                    if (!value.isEmpty()) {
+                                        relativeNames.add(value);
+                                    }
+                                }
+                                System.out.println("Names count:"+names.size());
+                                System.out.println("RElatives count:"+relativeNames.size());
+
+                                for (int n = 0; n < names.size(); n++) {
+                                    if (voter.getName().contains(names.get(n))) {
+                                        voter.setRelativeName(relativeNames.get(n));
+                                        break;
+                                    }
+                                }
+
+                                voter.setAddress(StringUtils.extractAfterMatch(lines[1], "Section No and Name"));
+                                //voter.setAddress(lines[1]);
+                                Map<String, String> mapResultConstituency = StringUtils.splitStringByKeyIgnoreCase(
+                                        lines[0],
+                                        ":");
+                                String assembly = mapResultConstituency.get("second");
+                                voter.setAssembly(assembly);
+                                voter.setWardNo(StringUtils.extractStringWithPattern(lines[1], "Ward", "\\s*(\\d+)\\b"));
+                                // Extract voter details using new generic pattern methods
+                                extractVoterDetailsUsingPatterns(lines[0], voter);
+                                voter = getStreetAndPollingStationDetails(fileName, voter);
+                                voter.setDistrict(StringUtils.extractAfterMatch(voter.getPart(), "Distriot :"));
+
+                                names.clear();
+                                relativeNames.clear();
                                 voterMatches.add(voter);
-                                break;
                             }
                         }
                     }
                 }
-                if (relativeNamePresent && i == 1) {
-                    // Check if term matches FatherName label
-                    if ((matchesRelativeLabel(lowerLine, term, Label.FATHER_NAME)) || (matchesRelativeLabel(lowerLine, term, Label.HUSBAND_NAME))) {
-                        if (nameMatch) {
-                            voter.setRelativeName(term);
-                            relativeMatch = true;
-                        }
-
-                    }
-                }
-                if (!streetMatch && streetNamePresent) {
+                if (streetNamePresent) {
                     // Check if street matches
+                    /*if (relativeNamePresent) {
+                        term = terms.get(2);
+                    } else {
+                        term = terms.get(1);
+                    }
                     if (lines[1].contains(term.toLowerCase())) {
                         Map<String, String> mapResultConstituency = StringUtils.splitStringByKeyIgnoreCase(
                                 lines[0],
@@ -413,38 +497,25 @@ public class PDFSearchService {
                         voter = getStreetAndPollingStationDetails(fileName, voter);
                         voter.setDistrict(StringUtils.extractAfterMatch(voter.getPart(), "Distriot :"));
                         voterMatches.add(voter);
-
-                        streetMatch = true;
                     }
-                    {
-                        Map<String, String> mapResultConstituency = StringUtils.splitStringByKeyIgnoreCase(
-                                lines[0],
-                                ":");
-                        String assembly = mapResultConstituency.get("second");
-                        voter.setAssembly(assembly);
-                        voter.setWardNo(StringUtils.extractStringWithPattern(lines[1], "Ward", "\\s*(\\d+)\\b"));
-                        // Extract voter details using new generic pattern methods
-                        extractVoterDetailsUsingPatterns(lines[0], voter);
-                        voter = getStreetAndPollingStationDetails(fileName, voter);
-                        voter.setDistrict(StringUtils.extractAfterMatch(voter.getPart(), "Distriot :"));
-                        voterMatches.add(voter);
-
-                    }
+                   nameMatch=false;*/
+                }else if (nameMatch) {
+                   /* Map<String, String> mapResultConstituency = StringUtils.splitStringByKeyIgnoreCase(
+                            lines[0],
+                            ":");
+                    String assembly = mapResultConstituency.get("second");
+                    voter.setAssembly(assembly);
+                    voter.setWardNo(StringUtils.extractStringWithPattern(lines[1], "Ward", "\\s*(\\d+)\\b"));
+                    // Extract voter details using new generic pattern methods
+                    extractVoterDetailsUsingPatterns(lines[0], voter);
+                    voter = getStreetAndPollingStationDetails(fileName, voter);
+                    voter.setDistrict(StringUtils.extractAfterMatch(voter.getPart(), "Distriot :"));
+                    voterMatches.add(voter);
+                    names.clear();;
+                   nameMatch=false;
+                   relativeMatch=false;
+*/
                 }
-            }
-            if (nameMatch && streetMatch) {
-                voterMatches.add(voter);
-                nameMatch = false;
-                relativeMatch = false;
-                streetMatch = false;
-                voter = new Voter();
-            }
-            if (nameMatch && relativeMatch) {
-                voterMatches.add(voter);
-                nameMatch = false;
-                relativeMatch = false;
-                streetMatch = false;
-                voter = new Voter();
             }
         }
 
@@ -751,11 +822,11 @@ public class PDFSearchService {
         return parts.length > 0 ? parts[0].trim() : null;
     }
 
-    private SearchResult getAddressDetails(SearchResult searchResult,String fileName,String content) throws Exception {
+    private SearchResult getAddressDetails(SearchResult searchResult, String fileName, String content) throws Exception {
 
         String[] lines = content.split("\\r?\\n");
-        String addressLine=lines[1];
-        String wardLine=lines[1];
+        String addressLine = lines[1];
+        String wardLine = lines[1];
 
         searchResult.setStreetName(StringUtils.extractAfterMatch(wardLine, "Section No and Name"));
         searchResult = getStreetPollingStationDetails(fileName, searchResult);
