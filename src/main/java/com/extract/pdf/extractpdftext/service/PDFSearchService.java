@@ -392,7 +392,7 @@ public class PDFSearchService {
                                 List<String> relativeNames = new ArrayList<>();
 
                                 Pattern relativePattern = Pattern.compile(
-                                        "(?:Father|Husband|Mother)\\s*Nam[a-z]*\\s*:\\s*(.*?)(?=\\s*-|(?:Father|Husband|Mother)\\s*Nam[a-z]*\\s*:|$)",
+                                        "(?:Fath[a-z]r|Husband|Moth[a-z]r)\\s*Nam[a-z]*\\s*:\\s*(.*?)(?=\\s*-|(?:Fath[a-z]r|Husband|Moth[a-z]r)\\s*Nam[a-z]*\\s*:|$)",
                                         Pattern.CASE_INSENSITIVE
                                 );
 
@@ -405,12 +405,14 @@ public class PDFSearchService {
                                         System.out.println("Extracted relative name: " + value);
                                     }
                                 }
+                                if(names.size()==relativeNames.size()){
                                 for (int namesno = 0; namesno <names.size(); namesno ++) {
                                     if (names.get(namesno).toLowerCase().contains(terms.get(0).toLowerCase())) {
                                         System.out.println("Matching name for relative: " + names.get(namesno));
                                         System.out.println("No: " + namesno);
                                         voter.setRelativeName(relativeNames.get(namesno));
                                     }
+                                }
                                 }
                                 relativeMatch = true;
                                 voter.setAddress(StringUtils.extractAfterMatch(lines[1], "Section No and Name"));
@@ -435,7 +437,7 @@ public class PDFSearchService {
                                 List<String> relativeNames = new ArrayList<>();
                                 lowerLine = lines[++lineCount].toLowerCase();
                                 Pattern relativePattern = Pattern.compile(
-                                        "(?:Father|Husband|Mother)\\s*Nam[a-z]*\\s*:\\s*(.*?)(?=\\s*-|(?:Father|Husband|Mother)\\s*Nam[a-z]*\\s*:|$)",
+                                        "(?:Fath[a-z]r|Husband|Moth[a-z]r)\\s*Nam[a-z]*\\s*:\\s*(.*?)(?=\\s*-|(?:Fath[a-z]r|Husband|Moth[a-z]r)\\s*Nam[a-z]*\\s*:|$)",
                                         Pattern.CASE_INSENSITIVE
                                 );
 
@@ -448,13 +450,12 @@ public class PDFSearchService {
                                         relativeNames.add(value);
                                     }
                                 }
-                                System.out.println("Names count:"+names.size());
-                                System.out.println("RElatives count:"+relativeNames.size());
-
-                                for (int n = 0; n < names.size(); n++) {
-                                    if (voter.getName().contains(names.get(n))) {
-                                        voter.setRelativeName(relativeNames.get(n));
-                                        break;
+                                  if(names.size()==relativeNames.size()){
+                                    for (int n = 0; n < names.size(); n++) {
+                                        if (voter.getName().contains(names.get(n))) {
+                                            voter.setRelativeName(relativeNames.get(n));
+                                            break;
+                                        }
                                     }
                                 }
 
