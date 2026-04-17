@@ -117,29 +117,37 @@ public class PDFSearchService {
 
        BooleanQuery.Builder builder = new BooleanQuery.Builder();
 
-        Analyzer analyzer = buildAnalyzer();
+        Analyzer analyzer = buildAnalyzerv1();
 
         List<String> exactTokens = analyze("content", queryString, analyzer);
-        List<String> ngramTokens = analyze("content_ngram", queryString, analyzer);
+
 
 
         for (String token : exactTokens) {
 
             BooleanQuery.Builder tokenQuery = new BooleanQuery.Builder();
 
-            // Exact match (boosted)
+            // Exact match
             tokenQuery.add(
                     new BoostQuery(new TermQuery(new Term("content", token)), 3.0f),
                     BooleanClause.Occur.SHOULD
             );
 
-            // Ngram match
-            tokenQuery.add(
-                    new TermQuery(new Term("content_ngram", token)),
-                    BooleanClause.Occur.SHOULD
-            );
+            // Generate ngrams ONLY for this token
+            List<String> tokenNgrams = analyze("content_ngram", token, analyzer);
 
-            // 🔥 Each token must match (either exact or ngram)
+            BooleanQuery.Builder ngramQuery = new BooleanQuery.Builder();
+
+            for (String ng : tokenNgrams) {
+                ngramQuery.add(
+                        new TermQuery(new Term("content_ngram", ng)),
+                        BooleanClause.Occur.SHOULD
+                );
+            }
+
+            tokenQuery.add(ngramQuery.build(), BooleanClause.Occur.SHOULD);
+
+            // 🔥 MUST → ensures all words match
             builder.add(tokenQuery.build(), BooleanClause.Occur.MUST);
         }
 
@@ -887,8 +895,31 @@ public class PDFSearchService {
         return searchResult;
     }
 
-    private Analyzer buildAnalyzer() {
+
+
+    public static Analyzer buildAnalyzer() {
         return new PerFieldAnalyzerWrapper(
+                new StandardAnalyzer(),
+                Map.of(
+                        "content_ngram", new Analyzer() {
+                            @Override
+                            protected TokenStreamComponents createComponents(String fieldName) {
+                                Tokenizer tokenizer = new StandardTokenizer();
+                                TokenStream tokenStream = new LowerCaseFilter(tokenizer);
+                                tokenStream = new NGramTokenFilter(tokenStream, 3, 10, false);
+                                return new TokenStreamComponents(tokenizer, tokenStream);
+                            }
+                        }
+                )
+        );
+
+
+    }
+
+
+
+    public static Analyzer buildAnalyzerv1() {
+        return new PerFieldAnalyzerWrapper(new PerFieldAnalyzerWrapper(
                 new StandardAnalyzer(),
                 Map.of(
                         "content_ngram", new Analyzer() {
@@ -901,9 +932,8 @@ public class PDFSearchService {
                             }
                         }
                 )
-        );
+        ));
     }
-
 
     private List<String> analyze(String field, String text, Analyzer analyzer) throws Exception {
         List<String> result = new ArrayList<>();

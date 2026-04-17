@@ -103,7 +103,7 @@ public class PDFIndexService {
             logger.debug("Opened Lucene index directory: {}", pathConfig.getLuceneIndexDir());
 
             // 🔥 Custom analyzer: Standard + NGram per field
-            Analyzer analyzer = new PerFieldAnalyzerWrapper(
+            /*Analyzer analyzer = new PerFieldAnalyzerWrapper(
                     new StandardAnalyzer(), // default
                     Map.of(
                             "content_ngram", new Analyzer() {
@@ -116,9 +116,9 @@ public class PDFIndexService {
                                 }
                             }
                     )
-            );
+            );*/
 
-            IndexWriterConfig config = new IndexWriterConfig(analyzer);
+            IndexWriterConfig config = new IndexWriterConfig(PDFSearchService.buildAnalyzerv1());
             IndexWriter writer = new IndexWriter(dir, config);
 
             logger.debug("Created IndexWriter for file: {} at page: {}", fileName, page);
