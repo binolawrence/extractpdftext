@@ -4,7 +4,15 @@ import com.extract.pdf.extractpdftext.config.PathConfig;
 import com.extract.pdf.extractpdftext.pojo.SearchResult;
 import com.extract.pdf.extractpdftext.pojo.Voter;
 import com.extract.pdf.extractpdftext.util.StringUtils;
+import org.apache.lucene.analysis.Analyzer;
+import org.apache.lucene.analysis.LowerCaseFilter;
+import org.apache.lucene.analysis.TokenStream;
+import org.apache.lucene.analysis.Tokenizer;
+import org.apache.lucene.analysis.miscellaneous.PerFieldAnalyzerWrapper;
+import org.apache.lucene.analysis.ngram.NGramTokenFilter;
 import org.apache.lucene.analysis.standard.StandardAnalyzer;
+import org.apache.lucene.analysis.standard.StandardTokenizer;
+import org.apache.lucene.analysis.tokenattributes.CharTermAttribute;
 import org.apache.lucene.document.Document;
 import org.apache.lucene.document.IntPoint;
 import org.apache.lucene.index.DirectoryReader;
@@ -89,8 +97,10 @@ public class PDFSearchService {
         IndexReader reader = DirectoryReader.open(dir);
         IndexSearcher searcher = new IndexSearcher(reader);
 
-        QueryParser parser = new QueryParser("content", new StandardAnalyzer());
-        parser.setDefaultOperator(QueryParser.Operator.AND);
+        //QueryParser parser = new QueryParser("content", new StandardAnalyzer());
+        //parser.setDefaultOperator(QueryParser.Operator.AND);
+
+        // new content
 
         List<String> normalizedTerms = normalizeTerms(name, relativeName, streetName);
         if (normalizedTerms.isEmpty()) {
@@ -98,16 +108,58 @@ public class PDFSearchService {
             return Collections.emptyList();
         }
         String[] searchText = normalizedTerms.toArray(new String[0]);
+//        Query query = parser.parse(String.join(" ", normalizedTerms));
+        String queryString = String.join(" ", normalizedTerms);
+
+        List<String> tokens = normalizedTerms;
+
+        List<SearchResult> searchResults = new ArrayList<>();
+
+       BooleanQuery.Builder builder = new BooleanQuery.Builder();
+
+        Analyzer analyzer = buildAnalyzer();
+
+        List<String> exactTokens = analyze("content", queryString, analyzer);
+        List<String> ngramTokens = analyze("content_ngram", queryString, analyzer);
+
+
+        for (String token : exactTokens) {
+
+            BooleanQuery.Builder tokenQuery = new BooleanQuery.Builder();
+
+            // Exact match (boosted)
+            tokenQuery.add(
+                    new BoostQuery(new TermQuery(new Term("content", token)), 3.0f),
+                    BooleanClause.Occur.SHOULD
+            );
+
+            // Ngram match
+            tokenQuery.add(
+                    new TermQuery(new Term("content_ngram", token)),
+                    BooleanClause.Occur.SHOULD
+            );
+
+            // 🔥 Each token must match (either exact or ngram)
+            builder.add(tokenQuery.build(), BooleanClause.Occur.MUST);
+        }
+
+        Query finalQuery = builder.build();
+        //new content end
+
+        /*List<String> normalizedTerms = normalizeTerms(name, relativeName, streetName);
+        if (normalizedTerms.isEmpty()) {
+            reader.close();
+            return Collections.emptyList();
+        }
+        String[] searchText = normalizedTerms.toArray(new String[0]);*/
 
         /*for (String search : searchText) {
             if (OCRFixer.isAlphanumeric(search)) {
                 text = text.replaceFirst(search.toUpperCase(), OCRFixer.fixOCR(search.toUpperCase()));
             }
         }*/
-        String queryString = String.join(" ", normalizedTerms);
-        Query query = parser.parse(String.join(" ", normalizedTerms));
-        List<SearchResult> searchResults = new ArrayList<>();
-        TopDocs results = searcher.search(query, 20);
+
+          TopDocs results = searcher.search(finalQuery, 20);
         for (ScoreDoc sd : results.scoreDocs) {
             Document d = searcher.doc(sd.doc);
 
@@ -180,6 +232,7 @@ public class PDFSearchService {
 
         try (PDDocument document = PDDocument.load(new File(fullFilePath))) {
             PDFRenderer pdfRenderer = new PDFRenderer(document);
+
             int dpi = 100;  // Reduced from 150 to fit single view - no horizontal scroll needed
 
             // Extract the requested page as an image (pageNumber - 1 because PDF pages are 0-indexed)
@@ -361,7 +414,7 @@ public class PDFSearchService {
 
                 if (i == 0) {
                     // Check if term matches Name label (and not HusbandName or FatherName)
-                    if (!(matchesRelativeLabel(lowerLine, terms.get(i), Label.FATHER_NAME)) && !(matchesRelativeLabel(lowerLine, terms.get(i), Label.HUSBAND_NAME)) && !(matchesRelativeLabel(lowerLine, terms.get(i), Label.MOTHER_NAME))&&matchesLabel(lowerLine, term, Label.NAME)) {
+                    if (!(matchesRelativeLabel(lowerLine, terms.get(i), Label.FATHER_NAME)) && !(matchesRelativeLabel(lowerLine, terms.get(i), Label.HUSBAND_NAME)) && !(matchesRelativeLabel(lowerLine, terms.get(i), Label.MOTHER_NAME)) && matchesLabel(lowerLine, term, Label.NAME)) {
                         voter = new Voter();
                         //Extract the name
                         Pattern pattern = Pattern.compile("Nam[a-z]*\\s*:\\s*(.*?)(?=Nam[a-z]*\\s*:|$)", Pattern.CASE_INSENSITIVE);
@@ -385,7 +438,7 @@ public class PDFSearchService {
                             lowerLine = lines[++lineCount].toLowerCase();
                             System.out.println(lowerLine);
                             i = i + 1;
-                            if ((matchesRelativeLabel(lowerLine, terms.get(i), Label.FATHER_NAME)) || (matchesRelativeLabel(lowerLine, terms.get(i), Label.HUSBAND_NAME) ||(matchesRelativeLabel(lowerLine, terms.get(i), Label.MOTHER_NAME)))) {
+                            if ((matchesRelativeLabel(lowerLine, terms.get(i), Label.FATHER_NAME)) || (matchesRelativeLabel(lowerLine, terms.get(i), Label.HUSBAND_NAME) || (matchesRelativeLabel(lowerLine, terms.get(i), Label.MOTHER_NAME)))) {
 
                                 //Extract and set the relative name
 
@@ -405,14 +458,14 @@ public class PDFSearchService {
                                         System.out.println("Extracted relative name: " + value);
                                     }
                                 }
-                                if(names.size()==relativeNames.size()){
-                                for (int namesno = 0; namesno <names.size(); namesno ++) {
-                                    if (names.get(namesno).toLowerCase().contains(terms.get(0).toLowerCase())) {
-                                        System.out.println("Matching name for relative: " + names.get(namesno));
-                                        System.out.println("No: " + namesno);
-                                        voter.setRelativeName(relativeNames.get(namesno));
+                                if (names.size() == relativeNames.size()) {
+                                    for (int namesno = 0; namesno < names.size(); namesno++) {
+                                        if (names.get(namesno).toLowerCase().contains(terms.get(0).toLowerCase())) {
+                                            System.out.println("Matching name for relative: " + names.get(namesno));
+                                            System.out.println("No: " + namesno);
+                                            voter.setRelativeName(relativeNames.get(namesno));
+                                        }
                                     }
-                                }
                                 }
                                 relativeMatch = true;
                                 voter.setAddress(StringUtils.extractAfterMatch(lines[1], "Section No and Name"));
@@ -429,10 +482,10 @@ public class PDFSearchService {
                                 voter.setDistrict(StringUtils.extractAfterMatch(voter.getPart(), "Distriot :"));
                                 names.clear();
                                 relativeNames.clear();
-                                 voterMatches.add(voter);
+                                voterMatches.add(voter);
                                 //break;
                             }
-                        }else if (!relativeNamePresent && nameMatch) {
+                        } else if (!relativeNamePresent && nameMatch) {
                             {
                                 List<String> relativeNames = new ArrayList<>();
                                 lowerLine = lines[++lineCount].toLowerCase();
@@ -450,7 +503,7 @@ public class PDFSearchService {
                                         relativeNames.add(value);
                                     }
                                 }
-                                  if(names.size()==relativeNames.size()){
+                                if (names.size() == relativeNames.size()) {
                                     for (int n = 0; n < names.size(); n++) {
                                         if (voter.getName().contains(names.get(n))) {
                                             voter.setRelativeName(relativeNames.get(n));
@@ -500,7 +553,7 @@ public class PDFSearchService {
                         voterMatches.add(voter);
                     }
                    nameMatch=false;*/
-                }else if (nameMatch) {
+                } else if (nameMatch) {
                    /* Map<String, String> mapResultConstituency = StringUtils.splitStringByKeyIgnoreCase(
                             lines[0],
                             ":");
@@ -834,4 +887,35 @@ public class PDFSearchService {
         return searchResult;
     }
 
+    private Analyzer buildAnalyzer() {
+        return new PerFieldAnalyzerWrapper(
+                new StandardAnalyzer(),
+                Map.of(
+                        "content_ngram", new Analyzer() {
+                            @Override
+                            protected TokenStreamComponents createComponents(String fieldName) {
+                                Tokenizer tokenizer = new StandardTokenizer();
+                                TokenStream tokenStream = new LowerCaseFilter(tokenizer);
+                                tokenStream = new NGramTokenFilter(tokenStream, 3, 6, false);
+                                return new TokenStreamComponents(tokenizer, tokenStream);
+                            }
+                        }
+                )
+        );
+    }
+
+
+    private List<String> analyze(String field, String text, Analyzer analyzer) throws Exception {
+        List<String> result = new ArrayList<>();
+        TokenStream ts = analyzer.tokenStream(field, text);
+        CharTermAttribute attr = ts.addAttribute(CharTermAttribute.class);
+
+        ts.reset();
+        while (ts.incrementToken()) {
+            result.add(attr.toString());
+        }
+        ts.end();
+        ts.close();
+        return result;
+    }
 }
