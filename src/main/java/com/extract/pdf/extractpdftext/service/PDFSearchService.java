@@ -18,7 +18,6 @@ import org.apache.lucene.document.IntPoint;
 import org.apache.lucene.index.DirectoryReader;
 import org.apache.lucene.index.IndexReader;
 import org.apache.lucene.index.Term;
-import org.apache.lucene.queryparser.classic.QueryParser;
 import org.apache.lucene.search.*;
 import org.apache.lucene.store.Directory;
 import org.apache.lucene.store.FSDirectory;
@@ -97,30 +96,23 @@ public class PDFSearchService {
         IndexReader reader = DirectoryReader.open(dir);
         IndexSearcher searcher = new IndexSearcher(reader);
 
-        //QueryParser parser = new QueryParser("content", new StandardAnalyzer());
-        //parser.setDefaultOperator(QueryParser.Operator.AND);
-
-        // new content
-
-        List<String> normalizedTerms = normalizeTerms(name, relativeName, streetName);
+          List<String> normalizedTerms = normalizeTerms(name, relativeName, streetName);
         if (normalizedTerms.isEmpty()) {
             reader.close();
             return Collections.emptyList();
         }
         String[] searchText = normalizedTerms.toArray(new String[0]);
-//        Query query = parser.parse(String.join(" ", normalizedTerms));
         String queryString = String.join(" ", normalizedTerms);
 
         List<String> tokens = normalizedTerms;
 
         List<SearchResult> searchResults = new ArrayList<>();
 
-       BooleanQuery.Builder builder = new BooleanQuery.Builder();
+        BooleanQuery.Builder builder = new BooleanQuery.Builder();
 
         Analyzer analyzer = buildAnalyzerv1();
 
         List<String> exactTokens = analyze("content", queryString, analyzer);
-
 
 
         for (String token : exactTokens) {
@@ -152,22 +144,9 @@ public class PDFSearchService {
         }
 
         Query finalQuery = builder.build();
-        //new content end
 
-        /*List<String> normalizedTerms = normalizeTerms(name, relativeName, streetName);
-        if (normalizedTerms.isEmpty()) {
-            reader.close();
-            return Collections.emptyList();
-        }
-        String[] searchText = normalizedTerms.toArray(new String[0]);*/
 
-        /*for (String search : searchText) {
-            if (OCRFixer.isAlphanumeric(search)) {
-                text = text.replaceFirst(search.toUpperCase(), OCRFixer.fixOCR(search.toUpperCase()));
-            }
-        }*/
-
-          TopDocs results = searcher.search(finalQuery, 20);
+               TopDocs results = searcher.search(finalQuery, 20);
         for (ScoreDoc sd : results.scoreDocs) {
             Document d = searcher.doc(sd.doc);
 
@@ -176,16 +155,6 @@ public class PDFSearchService {
             System.out.println("content: " + content);
             int page = Integer.parseInt(d.get("pageNumberStored"));
             String fileLocation = d.get("filePath");
-            //String.setFileLocation(fileLocation);
-            //searchResult.setPageNo(page);
-            //searchResult.setFileName(fileName);
-            //searchResult.setName(name);
-            //searchResult.setRelativeName(relativeName);
-            //searchResult = getStreetPollingStationDetails(fileName, searchResult);
-            //searchResult = getAddressDetails(searchResult, fileName, content);
-            //System.out.println(fileName + " | Page: " + page);
-            //System.out.println("fileLocation: " + fileLocation);
-            //searchResults.add(searchResult);
 
 
             List<Voter> voters = getMatchingLines(content, searchText, fileName, relativeNamePresent, streetNamePresent);
@@ -896,7 +865,6 @@ public class PDFSearchService {
     }
 
 
-
     public static Analyzer buildAnalyzer() {
         return new PerFieldAnalyzerWrapper(
                 new StandardAnalyzer(),
@@ -917,7 +885,6 @@ public class PDFSearchService {
     }
 
 
-
     public static Analyzer buildAnalyzerv1() {
         return new PerFieldAnalyzerWrapper(new PerFieldAnalyzerWrapper(
                 new StandardAnalyzer(),
@@ -927,7 +894,7 @@ public class PDFSearchService {
                             protected TokenStreamComponents createComponents(String fieldName) {
                                 Tokenizer tokenizer = new StandardTokenizer();
                                 TokenStream tokenStream = new LowerCaseFilter(tokenizer);
-                                tokenStream = new NGramTokenFilter(tokenStream, 3, 6, false);
+                                tokenStream = new NGramTokenFilter(tokenStream, 3, 10, false);
                                 return new TokenStreamComponents(tokenizer, tokenStream);
                             }
                         }

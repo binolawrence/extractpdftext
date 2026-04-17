@@ -118,6 +118,7 @@ public class PDFIndexService {
                     )
             );*/
 
+
             IndexWriterConfig config = new IndexWriterConfig(PDFSearchService.buildAnalyzerv1());
             IndexWriter writer = new IndexWriter(dir, config);
 
