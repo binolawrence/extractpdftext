@@ -2,6 +2,7 @@ package com.extract.pdf.extractpdftext.service;
 
 import com.extract.pdf.extractpdftext.util.OcrProcessor;
 import com.extract.pdf.extractpdftext.util.PDFTextExtractor;
+import org.apache.lucene.index.IndexWriter;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.rendering.PDFRenderer;
 import org.apache.pdfbox.text.PDFTextStripper;
@@ -31,7 +32,7 @@ public class PDFProcessingService {
     }
 
 
-    public void processPDF(File file) throws Exception {
+    public void processPDF(File file, IndexWriter writer) throws Exception {
         logger.info("Starting PDF processing for file: {}", file.getName());
         try {
             PDDocument pdf = PDDocument.load(file);
@@ -53,7 +54,7 @@ public class PDFProcessingService {
                 } else {
                     logger.debug("Text extracted from page {}. Length: {}", page, text.length());
                 }
-                indexService.indexPDF(text, file.getName(), file.getAbsolutePath(), page);
+                indexService.indexPDF(text, file.getName(), file.getAbsolutePath(), page,writer);
             }
             pdf.close();
             logger.info("PDF processing completed successfully for file: {}", file.getName());

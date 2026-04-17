@@ -90,7 +90,7 @@ public class PDFIndexService {
         }
     }*/
 
-    public void indexPDF(String text, String fileName, String filePath, int page) throws Exception {
+    public void indexPDF(String text, String fileName, String filePath, int page,IndexWriter writer) throws Exception {
         logger.info("Indexing PDF content - File: {}, Page: {}", fileName, page);
 
         try {
@@ -119,8 +119,8 @@ public class PDFIndexService {
             );*/
 
 
-            IndexWriterConfig config = new IndexWriterConfig(PDFSearchService.buildAnalyzerv1());
-            IndexWriter writer = new IndexWriter(dir, config);
+            //IndexWriterConfig config = new IndexWriterConfig(PDFSearchService.buildAnalyzerv1());
+            //IndexWriter writer = new IndexWriter(dir, config);
 
             logger.debug("Created IndexWriter for file: {} at page: {}", fileName, page);
 
@@ -140,7 +140,7 @@ public class PDFIndexService {
             writer.addDocument(doc);
             logger.debug("Document added to index - File: {}, Page: {}", fileName, page);
 
-            writer.close();
+            //writer.close();
 
             logger.info("Successfully indexed PDF content - File: {}, Page: {}, Text length: {}", fileName, page, text.length());
 
