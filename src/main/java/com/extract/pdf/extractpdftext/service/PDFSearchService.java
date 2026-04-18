@@ -114,23 +114,23 @@ public class PDFSearchService {
 
         List<String> exactTokens = analyze("content", queryString, analyzer);
 
+        BooleanQuery.Builder tokenQuery = new BooleanQuery.Builder();
+
 
         for (String token : exactTokens) {
 
-            BooleanQuery.Builder tokenQuery = new BooleanQuery.Builder();
 
             // Exact match
             tokenQuery.add(
                     new BoostQuery(new TermQuery(new Term("content", token)), 3.0f),
                     BooleanClause.Occur.SHOULD
             );
+        }
 
-            // Generate ngrams ONLY for this token
-            List<String> tokenNgrams = analyze("content_ngram", token, analyzer);
 
             BooleanQuery.Builder ngramQuery = new BooleanQuery.Builder();
 
-            for (String ng : tokenNgrams) {
+            for (String ng : exactTokens) {
                 ngramQuery.add(
                         new TermQuery(new Term("content_ngram", ng)),
                         BooleanClause.Occur.SHOULD
@@ -141,7 +141,6 @@ public class PDFSearchService {
 
             // 🔥 MUST → ensures all words match
             builder.add(tokenQuery.build(), BooleanClause.Occur.MUST);
-        }
 
         Query finalQuery = builder.build();
 
