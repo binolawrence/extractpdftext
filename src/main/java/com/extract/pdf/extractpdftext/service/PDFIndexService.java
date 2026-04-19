@@ -99,48 +99,25 @@ public class PDFIndexService {
                 return;
             }
 
-            Directory dir = FSDirectory.open(Paths.get(pathConfig.getLuceneIndexDir()));
-            logger.debug("Opened Lucene index directory: {}", pathConfig.getLuceneIndexDir());
+               // 🔥 Minimal cleanup (only normalize spaces, keep symbols)
+                //text = text.replaceAll("\\s+", " ").trim();
 
-            // 🔥 Custom analyzer: Standard + NGram per field
-            /*Analyzer analyzer = new PerFieldAnalyzerWrapper(
-                    new StandardAnalyzer(), // default
-                    Map.of(
-                            "content_ngram", new Analyzer() {
-                                @Override
-                                protected TokenStreamComponents createComponents(String fieldName) {
-                                    Tokenizer tokenizer = new StandardTokenizer();
-                                    TokenStream tokenStream = new LowerCaseFilter(tokenizer);
-                                    tokenStream = new NGramTokenFilter(tokenStream, 3, 6,false);
-                                    return new TokenStreamComponents(tokenizer, tokenStream);
-                                }
-                            }
-                    )
-            );*/
+                Document doc = new Document();
 
+                // 🔹 Full text (for exact match)
+                doc.add(new TextField("content", text, Field.Store.YES));
 
-            //IndexWriterConfig config = new IndexWriterConfig(PDFSearchService.buildAnalyzerv1());
-            //IndexWriter writer = new IndexWriter(dir, config);
+                // 🔹 Ngram field (for substring match)
+                doc.add(new TextField("content_ngram", text, Field.Store.NO));
 
-            logger.debug("Created IndexWriter for file: {} at page: {}", fileName, page);
+                // 🔹 Metadata
+                doc.add(new StringField("fileName", fileName, Field.Store.YES));
+                doc.add(new StoredField("filePath", filePath));
 
-            Document doc = new Document();
+                doc.add(new IntPoint("pageNumber", page));
+                doc.add(new StoredField("pageNumberStored", page));
 
-            // ✅ Normal full-word search
-            doc.add(new TextField("content", text, Field.Store.YES));
-
-            // ✅ NGram partial search (not stored to reduce index size)
-            doc.add(new TextField("content_ngram", text, Field.Store.NO));
-
-            doc.add(new StringField("fileName", fileName, Field.Store.YES));
-            doc.add(new StoredField("filePath", filePath));
-            doc.add(new IntPoint("pageNumber", page));
-            doc.add(new StoredField("pageNumberStored", page));
-
-            writer.addDocument(doc);
-            logger.debug("Document added to index - File: {}, Page: {}", fileName, page);
-
-            //writer.close();
+                writer.addDocument(doc);
 
             logger.info("Successfully indexed PDF content - File: {}, Page: {}, Text length: {}", fileName, page, text.length());
 

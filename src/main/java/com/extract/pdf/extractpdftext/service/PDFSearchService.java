@@ -104,48 +104,57 @@ public class PDFSearchService {
         String[] searchText = normalizedTerms.toArray(new String[0]);
         String queryString = String.join(" ", normalizedTerms);
 
-        List<String> tokens = normalizedTerms;
 
         List<SearchResult> searchResults = new ArrayList<>();
 
-        BooleanQuery.Builder builder = new BooleanQuery.Builder();
 
         Analyzer analyzer = buildAnalyzerv1();
 
-        List<String> exactTokens = analyze("content", queryString, analyzer);
+        List<String> tokens = analyze("content", queryString, analyzer);
 
-        BooleanQuery.Builder tokenQuery = new BooleanQuery.Builder();
+        BooleanQuery.Builder builder = new BooleanQuery.Builder();
 
+        for (String token : tokens) {
 
-        for (String token : exactTokens) {
+            BooleanQuery.Builder perToken = new BooleanQuery.Builder();
 
-
-            // Exact match
-            tokenQuery.add(
-                    new BoostQuery(new TermQuery(new Term("content", token)), 3.0f),
+            // 🔹 Exact match (full word)
+            perToken.add(
+                    new BoostQuery(new TermQuery(new Term("content", token)), 2.0f),
                     BooleanClause.Occur.SHOULD
             );
-        }
 
+            // 🔹 Ngram match (substring)
+            List<String> ngrams = analyze("content_ngram", token, analyzer);
 
-            BooleanQuery.Builder ngramQuery = new BooleanQuery.Builder();
+            BooleanQuery.Builder ngramBuilder = new BooleanQuery.Builder();
 
-            for (String ng : exactTokens) {
-                ngramQuery.add(
+            for (String ng : ngrams) {
+                ngramBuilder.add(
                         new TermQuery(new Term("content_ngram", ng)),
                         BooleanClause.Occur.SHOULD
                 );
             }
 
-            tokenQuery.add(ngramQuery.build(), BooleanClause.Occur.SHOULD);
+            // 🔥 Require some ngram overlap (not too strict)
+            if (!ngrams.isEmpty()) {
+                ngramBuilder.setMinimumNumberShouldMatch(
+                        Math.max(1, ngrams.size() / 3)
+                );
+            }
 
-            // 🔥 MUST → ensures all words match
-            builder.add(tokenQuery.build(), BooleanClause.Occur.MUST);
+            perToken.add(ngramBuilder.build(), BooleanClause.Occur.SHOULD);
+
+            // 🔥 OR across tokens
+            builder.add(perToken.build(), BooleanClause.Occur.SHOULD);
+        }
+
+// 🔥 Require at least some tokens to match
+        builder.setMinimumNumberShouldMatch(Math.max(1, tokens.size() / 2));
 
         Query finalQuery = builder.build();
 
-
-               TopDocs results = searcher.search(finalQuery, 20);
+            TopDocs results = searcher.search(finalQuery, 20);
         for (ScoreDoc sd : results.scoreDocs) {
             Document d = searcher.doc(sd.doc);
 
@@ -446,11 +455,11 @@ public class PDFSearchService {
                                 relativeMatch = true;
                                 voter.setAddress(StringUtils.extractAfterMatch(lines[1], "Section No and Name"));
                                 //voter.setAddress(lines[1]);
-                                Map<String, String> mapResultConstituency = StringUtils.splitStringByKeyIgnoreCase(
+                                /*   Map<String, String> mapResultConstituency = StringUtils.splitStringByKeyIgnoreCase(
                                         lines[0],
-                                        ":");
-                                String assembly = mapResultConstituency.get("second");
-                                voter.setAssembly(assembly);
+                                        ":");*/
+                                //String assembly = mapResultConstituency.get("second");
+                                //voter.setAssembly(assembly);
                                 voter.setWardNo(StringUtils.extractStringWithPattern(lines[1], "Ward", "\\s*(\\d+)\\b"));
                                 // Extract voter details using new generic pattern methods
                                 extractVoterDetailsUsingPatterns(lines[0], voter);
@@ -864,25 +873,6 @@ public class PDFSearchService {
     }
 
 
-    public static Analyzer buildAnalyzer() {
-        return new PerFieldAnalyzerWrapper(
-                new StandardAnalyzer(),
-                Map.of(
-                        "content_ngram", new Analyzer() {
-                            @Override
-                            protected TokenStreamComponents createComponents(String fieldName) {
-                                Tokenizer tokenizer = new StandardTokenizer();
-                                TokenStream tokenStream = new LowerCaseFilter(tokenizer);
-                                tokenStream = new NGramTokenFilter(tokenStream, 3, 10, false);
-                                return new TokenStreamComponents(tokenizer, tokenStream);
-                            }
-                        }
-                )
-        );
-
-
-    }
-
 
     public static Analyzer buildAnalyzerv1() {
         return new PerFieldAnalyzerWrapper(new PerFieldAnalyzerWrapper(
@@ -900,6 +890,8 @@ public class PDFSearchService {
                 )
         ));
     }
+
+
 
     private List<String> analyze(String field, String text, Analyzer analyzer) throws Exception {
         List<String> result = new ArrayList<>();

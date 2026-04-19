@@ -2,6 +2,7 @@ package com.extract.pdf.extractpdftext.controller;
 
 import com.extract.pdf.extractpdftext.config.PathConfig;
 import com.extract.pdf.extractpdftext.service.PDFProcessingService;
+import com.extract.pdf.extractpdftext.service.PDFSearchService;
 import org.apache.lucene.analysis.standard.StandardAnalyzer;
 import org.apache.lucene.index.IndexWriter;
 import org.apache.lucene.index.IndexWriterConfig;
@@ -118,7 +119,10 @@ public class PDFUploadController {
 
         Directory dir = FSDirectory.open(Paths.get(pathConfig.getLuceneIndexDir()));
 
-        IndexWriterConfig config = new IndexWriterConfig(new StandardAnalyzer());
+        //IndexWriterConfig config = new IndexWriterConfig(new StandardAnalyzer());
+        IndexWriterConfig config = new IndexWriterConfig(PDFSearchService.buildAnalyzerv1());
+        config.setOpenMode(IndexWriterConfig.OpenMode.CREATE_OR_APPEND);
+
         IndexWriter writer = new IndexWriter(dir, config);
 
         List<Future<?>> futures = new ArrayList<>();
