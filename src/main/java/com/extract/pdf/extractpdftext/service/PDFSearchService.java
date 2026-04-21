@@ -161,6 +161,8 @@ public class PDFSearchService {
 
 
             logger.info("Total hits: " + results.totalHits.value);
+        SearchResult searchResult = new SearchResult();
+
         for (ScoreDoc sd : results.scoreDocs) {
             Document d = searcher.doc(sd.doc);
 
@@ -172,7 +174,6 @@ public class PDFSearchService {
 
             List<Voter> voters = getMatchingLines(content, searchText, fileName, namePresent,relativeNamePresent, streetNamePresent);
             voters.forEach(v -> {
-                SearchResult searchResult = new SearchResult();
                 searchResult.setFileLocation(fileLocation);
                 searchResult.setPageNo(page);
                 searchResult.setFileName(fileName);
@@ -600,19 +601,22 @@ public class PDFSearchService {
                         // Check if street matches
 
 
-                        for (String token : queryText) {
-                            if (lines[1].toLowerCase().contains(token.toLowerCase())) {
+                     //string array to string
+
+                        //for (String token : queryText) {
+                          String streetName=String.join(" ", queryText);
+                            if (lines[1].toLowerCase().contains(streetName.toLowerCase())) {
                         /*Map<String, String> mapResultConstituency = StringUtils.splitStringByKeyIgnoreCase(
                                 lines[0],
                                 ":");
                         String assembly = mapResultConstituency.get("second");*/
-                                voter.setWardNo(StringUtils.extractStringWithPattern(lines[1], "Ward", "\\s*(\\d+)\\b"));
+                               // voter.setWardNo(StringUtils.extractStringWithPattern(lines[1], "Ward", "\\s*(\\d+)\\b"));
                                 // Extract voter details using new generic pattern methods
                                 //extractVoterDetailsUsingPatterns(lines[0], voter);
                                 voter = getStreetAndPollingStationDetails(fileName, voter);
                                 voterMatches.add(voter);
                                 return voterMatches;
-                            }
+                          //  }
                         }
                     }            }
         }
