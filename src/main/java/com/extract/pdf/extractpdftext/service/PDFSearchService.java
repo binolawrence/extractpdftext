@@ -87,6 +87,7 @@ public class PDFSearchService {
 
     @SuppressWarnings("deprecation")
     public List<SearchResult> search(String name, String relativeName, String streetName) throws Exception {
+        logger.info("Search called with - Name: {}, RelativeName: {}, StreetName: {}", name, relativeName, streetName);
 
         Directory dir = FSDirectory.open(Paths.get(pathConfig.getLuceneIndexDir()));
         boolean relativeNamePresent = relativeName != null && !relativeName.isBlank();
@@ -157,12 +158,14 @@ public class PDFSearchService {
         Query finalQuery = builder.build();
 
             TopDocs results = searcher.search(finalQuery, 20);
+
+
+            logger.info("Total hits: " + results.totalHits.value);
         for (ScoreDoc sd : results.scoreDocs) {
             Document d = searcher.doc(sd.doc);
 
             fileName = d.get("fileName");
             String content = d.get("content");
-            System.out.println("content: " + content);
             int page = Integer.parseInt(d.get("pageNumberStored"));
             String fileLocation = d.get("filePath");
 
