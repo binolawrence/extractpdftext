@@ -157,10 +157,11 @@ public class PDFSearchService {
 
         Query finalQuery = builder.build();
 
-            TopDocs results = searcher.search(finalQuery, 20);
+            TopDocs results = searcher.search(finalQuery, 10);
 
 
             logger.info("Total hits: " + results.totalHits.value);
+            int searchCount=0;
         for (ScoreDoc sd : results.scoreDocs) {
             Document d = searcher.doc(sd.doc);
 
@@ -170,7 +171,7 @@ public class PDFSearchService {
             String fileLocation = d.get("filePath");
 
 
-            List<Voter> voters = getMatchingLines(content, searchText, fileName, namePresent,relativeNamePresent, streetNamePresent);
+            List<Voter> voters = getMatchingLines(searchCount++,content, searchText, fileName, namePresent,relativeNamePresent, streetNamePresent);
             voters.forEach(v -> {
                 SearchResult searchResult = new SearchResult();
                 searchResult.setFileLocation(fileLocation);
@@ -277,8 +278,6 @@ public class PDFSearchService {
         for (ScoreDoc sd : firstPageResult.scoreDocs) {
             Document d = searcher.doc(sd.doc);
 
-            System.out.println("File: " + d.get("fileName"));
-            System.out.println("Page: " + d.get("page"));
             content = d.get("content");
             break;
         }
@@ -380,7 +379,7 @@ public class PDFSearchService {
     }
 
     @SuppressWarnings("all")
-    private List<Voter> getMatchingLines(String content, String[] queryText, String fileName, boolean namePresent,boolean relativeNamePresent, boolean streetNamePresent) throws Exception {
+    private List<Voter> getMatchingLines(int count,String content, String[] queryText, String fileName, boolean namePresent,boolean relativeNamePresent, boolean streetNamePresent) throws Exception {
         List<Voter> voterMatches = new ArrayList<>();
         String[] lines = content.split("\\r?\\n");
         List<String> terms = normalizeTerms(queryText);
@@ -402,7 +401,7 @@ public class PDFSearchService {
             for (int i = 0; i < terms.size(); i++) {
                 String term = terms.get(i).toLowerCase();
 
-                if (i==0&&namePresent) {
+                if (i == 0 && namePresent) {
                     // Check if term matches Name label (and not HusbandName or FatherName)
                     if (!(matchesRelativeLabel(lowerLine, terms.get(i), Label.FATHER_NAME)) && !(matchesRelativeLabel(lowerLine, terms.get(i), Label.HUSBAND_NAME)) && !(matchesRelativeLabel(lowerLine, terms.get(i), Label.MOTHER_NAME)) && matchesLabel(lowerLine, term, Label.NAME)) {
                         voter = new Voter();
@@ -426,7 +425,6 @@ public class PDFSearchService {
 
                         if (nameMatch && relativeNamePresent) {
                             lowerLine = StringUtils.normalize((lines[++lineCount]));
-                            System.out.println(lowerLine);
                             i = i + 1;
                             if ((matchesRelativeLabel(lowerLine, terms.get(i), Label.FATHER_NAME)) || (matchesRelativeLabel(lowerLine, terms.get(i), Label.HUSBAND_NAME) || (matchesRelativeLabel(lowerLine, terms.get(i), Label.MOTHER_NAME)))) {
 
@@ -520,94 +518,87 @@ public class PDFSearchService {
                         }
                     }
                 }
-                if (!namePresent&&relativeNamePresent&&streetNamePresent) {
+                if (!namePresent && relativeNamePresent && streetNamePresent) {
                     List<String> relativeNames = new ArrayList<>();
-                    List<Voter> relativeMatches=new ArrayList<>();
+                    List<Voter> relativeMatches = new ArrayList<>();
 
                     lowerLine = StringUtils.normalize(lines[lineCount]);
-                  if ((matchesRelativeLabel(lowerLine, terms.get(i), Label.FATHER_NAME)) || (matchesRelativeLabel(lowerLine, terms.get(i), Label.HUSBAND_NAME) || (matchesRelativeLabel(lowerLine, terms.get(i), Label.MOTHER_NAME)))) {
+                    if ((matchesRelativeLabel(lowerLine, terms.get(i), Label.FATHER_NAME)) || (matchesRelativeLabel(lowerLine, terms.get(i), Label.HUSBAND_NAME) || (matchesRelativeLabel(lowerLine, terms.get(i), Label.MOTHER_NAME)))) {
 
 
+                        Pattern relativePattern = Pattern.compile(
+                                "(?:Fath[a-z]r|Husband|Moth[a-z]r)\\s*Nam[a-z]*\\s*:\\s*(.*?)(?=\\s*-|(?:Fath[a-z]r|Husband|Moth[a-z]r)\\s*Nam[a-z]*\\s*:|$)",
+                                Pattern.CASE_INSENSITIVE
+                        );
+                        Matcher relativeMatcher = relativePattern.matcher(lowerLine);
 
-                    Pattern relativePattern = Pattern.compile(
-                            "(?:Fath[a-z]r|Husband|Moth[a-z]r)\\s*Nam[a-z]*\\s*:\\s*(.*?)(?=\\s*-|(?:Fath[a-z]r|Husband|Moth[a-z]r)\\s*Nam[a-z]*\\s*:|$)",
-                            Pattern.CASE_INSENSITIVE
-                    );
-                    Matcher relativeMatcher = relativePattern.matcher(lowerLine);
-
-                    while (relativeMatcher.find()) {
-                        String value = relativeMatcher.group(1).trim();
-                        if (!value.isEmpty()) {
-                            relativeNames.add(value);
-                            if(value.contains(term)){
-                                voter=new Voter();
-                                voter.setRelativeName(value);
-                                relativeMatches.add(voter);
+                        while (relativeMatcher.find()) {
+                            String value = relativeMatcher.group(1).trim();
+                            if (!value.isEmpty()) {
+                                relativeNames.add(value);
+                                if (value.contains(term)) {
+                                    voter = new Voter();
+                                    voter.setRelativeName(value);
+                                    relativeMatches.add(voter);
+                                }
                             }
                         }
-                    }
 
 
-                    //Name setting
-                    List<String> names = new ArrayList<>();
-                    int nameRow=lineCount-1;
-                    lowerLine = StringUtils.normalize(lines[nameRow]);
-                    Pattern pattern = Pattern.compile("Nam[a-z]*\\s*:\\s*(.*?)(?=Nam[a-z]*\\s*:|$)", Pattern.CASE_INSENSITIVE);
-                    Matcher matcher = pattern.matcher(lowerLine);
+                        //Name setting
+                        List<String> names = new ArrayList<>();
+                        int nameRow = lineCount - 1;
+                        lowerLine = StringUtils.normalize(lines[nameRow]);
+                        Pattern pattern = Pattern.compile("Nam[a-z]*\\s*:\\s*(.*?)(?=Nam[a-z]*\\s*:|$)", Pattern.CASE_INSENSITIVE);
+                        Matcher matcher = pattern.matcher(lowerLine);
 
-                    while (matcher.find()) {
-                        String value = matcher.group(1).trim();
-                        if (!value.isEmpty()) {
-                            names.add(value);
+                        while (matcher.find()) {
+                            String value = matcher.group(1).trim();
+                            if (!value.isEmpty()) {
+                                names.add(value);
+                            }
                         }
+
+                        for (Voter v : relativeMatches) {
+
+                            if (names.size() == relativeNames.size()) {
+                                for (int n = 0; n < names.size(); n++) {
+                                    if (relativeNames.get(n).contains(voter.getRelativeName())) {
+                                        v.setName(names.get(n));
+                                    }
+                                }
+                            }
+
+
+                            voter.setAddress(StringUtils.extractAfterMatch(lines[1], "Section No and Name"));
+                            //voter.setAddress(lines[1]);
+                            Map<String, String> mapResultConstituency = StringUtils.splitStringByKeyIgnoreCase(
+                                    lines[0],
+                                    ":");
+                            String assembly = mapResultConstituency.get("second");
+                            voter.setAssembly(assembly);
+                            voter.setWardNo(StringUtils.extractStringWithPattern(lines[1], "Ward", "\\s*(\\d+)\\b"));
+                            // Extract voter details using new generic pattern methods
+                            extractVoterDetailsUsingPatterns(lines[0], voter);
+                            voter = getStreetAndPollingStationDetails(fileName, voter);
+                            voter.setDistrict(StringUtils.extractAfterMatch(voter.getPart(), "Distriot :"));
+                        }
+                        names.clear();
+                        relativeNames.clear();
+                        voterMatches.addAll(relativeMatches);
+
+
                     }
-
-                      for(Voter v:relativeMatches) {
-
-                          if (names.size() == relativeNames.size()) {
-                              for (int n = 0; n < names.size(); n++) {
-                                  if (relativeNames.get(n).contains(voter.getRelativeName())) {
-                                      v.setName(names.get(n));
-                                  }
-                              }
-                          }
-
-
-                          voter.setAddress(StringUtils.extractAfterMatch(lines[1], "Section No and Name"));
-                          //voter.setAddress(lines[1]);
-                          Map<String, String> mapResultConstituency = StringUtils.splitStringByKeyIgnoreCase(
-                                  lines[0],
-                                  ":");
-                          String assembly = mapResultConstituency.get("second");
-                          voter.setAssembly(assembly);
-                          voter.setWardNo(StringUtils.extractStringWithPattern(lines[1], "Ward", "\\s*(\\d+)\\b"));
-                          // Extract voter details using new generic pattern methods
-                          extractVoterDetailsUsingPatterns(lines[0], voter);
-                          voter = getStreetAndPollingStationDetails(fileName, voter);
-                          voter.setDistrict(StringUtils.extractAfterMatch(voter.getPart(), "Distriot :"));
-                      }
-                    names.clear();
-                    relativeNames.clear();
-                    voterMatches.addAll(relativeMatches);
-
-
-                  }
                 }
+            }
                  if(!namePresent&&!relativeNamePresent&&streetNamePresent) {
 
                         voter = new Voter();
-
-                        // Check if street matches
-
-
-                     //string array to string
-
-                        //for (String token : queryText) {
+                //for (String token : queryText) {
                      // String streetName=String.join(" ", queryText);
                      String normalizedStreet = StringUtils.normalize(String.join(" ", queryText));
                      String streetLine=StringUtils.normalize(lines[1]);
 
-                    logger.info("line 1 contains:"+lines[1]);
                     //logger.info("line 2 contains:"+lines[2]);
                     // for (String line : lines) {
                          if (StringUtils.normalize(streetLine).contains(normalizedStreet)) {
@@ -618,7 +609,7 @@ public class PDFSearchService {
                      //}
 
                     }            }
-        }
+
 
         // Check if all terms are matched
 
@@ -695,7 +686,6 @@ public class PDFSearchService {
         boolean pollingStationAddressFlagFetching = false;
 
         String[] lines = content.split("\\r?\\n");
-        System.out.println("lines content:");
         Arrays.stream(lines).forEach(System.out::println);
         String[] terms = new String[]{"Details of part and polling area", "Polling station details", "Address of Polling Station :", "NUMBER OF ELECTORS"};
         for (String line : lines) {
