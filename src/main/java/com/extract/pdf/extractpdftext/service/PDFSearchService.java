@@ -161,8 +161,6 @@ public class PDFSearchService {
 
 
             logger.info("Total hits: " + results.totalHits.value);
-        SearchResult searchResult = new SearchResult();
-
         for (ScoreDoc sd : results.scoreDocs) {
             Document d = searcher.doc(sd.doc);
 
@@ -174,6 +172,7 @@ public class PDFSearchService {
 
             List<Voter> voters = getMatchingLines(content, searchText, fileName, namePresent,relativeNamePresent, streetNamePresent);
             voters.forEach(v -> {
+                SearchResult searchResult = new SearchResult();
                 searchResult.setFileLocation(fileLocation);
                 searchResult.setPageNo(page);
                 searchResult.setFileName(fileName);
