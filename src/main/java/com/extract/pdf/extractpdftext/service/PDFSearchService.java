@@ -605,15 +605,17 @@ public class PDFSearchService {
                         //for (String token : queryText) {
                      // String streetName=String.join(" ", queryText);
                      String normalizedStreet = StringUtils.normalize(String.join(" ", queryText));
+                     String streetLine=StringUtils.normalize(lines[1]);
+
                     logger.info("line 1 contains:"+lines[1]);
-                    logger.info("line 2 contains:"+lines[2]);
-                     for (String line : lines) {
-                         if (StringUtils.normalize(line).contains(normalizedStreet)) {
+                    //logger.info("line 2 contains:"+lines[2]);
+                    // for (String line : lines) {
+                         if (StringUtils.normalize(streetLine).contains(normalizedStreet)) {
                              voter = getStreetAndPollingStationDetails(fileName, voter);
                              voterMatches.add(voter);
                              return voterMatches;
                          }
-                     }
+                     //}
 
                     }            }
         }
