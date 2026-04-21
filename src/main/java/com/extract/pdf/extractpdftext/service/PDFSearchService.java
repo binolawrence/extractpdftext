@@ -743,8 +743,6 @@ public class PDFSearchService {
         boolean pollingStationAddressFlagFetching = false;
 
         String[] lines = content.split("\\r?\\n");
-        System.out.println("lines content:");
-        Arrays.stream(lines).forEach(System.out::println);
         String[] terms = new String[]{"Details of part and polling area", "Polling station details", "Address of Polling Station :", "NUMBER OF ELECTORS"};
         for (String line : lines) {
             if (line.contains(terms[0])) {
