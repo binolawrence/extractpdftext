@@ -24,12 +24,44 @@ public class PDFController {
     private PDFSearchService searchService;
 
     @GetMapping("/search")
-    public List<SearchResult> search(@RequestParam String name, @RequestParam(required = false) String relativeName, @RequestParam(required = false) String streetName) throws Exception {
-          logger.info("Search endpoint called - Name: {}, RelativeName: {}, StreetName: {}", name, relativeName, streetName);
-          logger.debug("Invoking search service");
-          List<SearchResult> results = searchService.search(name, relativeName, streetName);
-          logger.info("Search completed. Found {} results", results.size());
-          return results;
+    public ResponseEntity<?> search(
+            @RequestParam(required = false) String name,
+            @RequestParam(required = false) String relativeName,
+            @RequestParam(required = false) String streetName) {
+
+        logger.info("Search endpoint called - Name: {}, RelativeName: {}, StreetName: {}",
+                name, relativeName, streetName);
+
+        // 🔴 Validation: at least one parameter must be present
+        if (isBlank(name) && isBlank(relativeName) && isBlank(streetName)) {
+            logger.warn("Validation failed - no parameters provided");
+
+            return ResponseEntity
+                    .badRequest()
+                    .body("At least one parameter (name, relativeName, streetName) must be provided");
+        }
+
+        try {
+            logger.debug("Invoking search service");
+
+            List<SearchResult> results = searchService.search(name, relativeName, streetName);
+
+            logger.info("Search completed. Found {} results", results.size());
+
+            return ResponseEntity.ok(results);
+
+        } catch (Exception e) {
+            logger.error("Error during search", e);
+
+            return ResponseEntity
+                    .status(500)
+                    .body("Internal server error");
+        }
+    }
+
+    // 🔧 Helper
+    private boolean isBlank(String str) {
+        return str == null || str.trim().isEmpty();
     }
 
     @GetMapping("/loadPDF")
