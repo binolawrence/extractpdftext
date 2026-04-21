@@ -603,23 +603,18 @@ public class PDFSearchService {
                      //string array to string
 
                         //for (String token : queryText) {
-                          String streetName=String.join(" ", queryText);
-                         String normalizedLine = StringUtils.normalize(lines[1]);
-                         String normalizedStreet = StringUtils.normalize(streetName);
+                     // String streetName=String.join(" ", queryText);
+                     String normalizedStreet = StringUtils.normalize(String.join(" ", queryText));
+                    logger.info("line 1 contains:"+lines[1]);
+                    logger.info("line 2 contains:"+lines[2]);
+                     for (String line : lines) {
+                         if (StringUtils.normalize(line).contains(normalizedStreet)) {
+                             voter = getStreetAndPollingStationDetails(fileName, voter);
+                             voterMatches.add(voter);
+                             return voterMatches;
+                         }
+                     }
 
-                     if (normalizedLine.contains(normalizedStreet)) {
-                        /*Map<String, String> mapResultConstituency = StringUtils.splitStringByKeyIgnoreCase(
-                                lines[0],
-                                ":");
-                        String assembly = mapResultConstituency.get("second");*/
-                               // voter.setWardNo(StringUtils.extractStringWithPattern(lines[1], "Ward", "\\s*(\\d+)\\b"));
-                                // Extract voter details using new generic pattern methods
-                                //extractVoterDetailsUsingPatterns(lines[0], voter);
-                                voter = getStreetAndPollingStationDetails(fileName, voter);
-                                voterMatches.add(voter);
-                                return voterMatches;
-                          //  }
-                        }
                     }            }
         }
 
