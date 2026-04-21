@@ -77,7 +77,7 @@ public class PDFSearchService {
             if (raw != null) {
                 String trimmed = raw.trim();
                 if (!trimmed.isEmpty()) {
-                    terms.add(trimmed);
+                    terms.add(StringUtils.normalize(trimmed));
                 }
             }
         }
@@ -331,11 +331,11 @@ public class PDFSearchService {
         boolean[] termMatched = new boolean[terms.size()];
 
         for (String line : lines) {
-            String lowerLine = line.toLowerCase();
+            String lowerLine = StringUtils.normalize(line);
 
             for (int i = 0; i < terms.size(); i++) {
                 String term = terms.get(i);
-                if (lowerLine.contains(term.toLowerCase())) {
+                if (lowerLine.contains(StringUtils.normalize(term))) {
                     termMatched[i] = true;
                 }
             }
@@ -397,7 +397,7 @@ public class PDFSearchService {
 
         for (int lineCount = 0; lineCount < lines.length; lineCount++) {
 
-            String lowerLine = lines[lineCount].toLowerCase();
+            String lowerLine = StringUtils.normalize(lines[lineCount].toLowerCase());
 
             for (int i = 0; i < terms.size(); i++) {
                 String term = terms.get(i).toLowerCase();
@@ -425,7 +425,7 @@ public class PDFSearchService {
 
 
                         if (nameMatch && relativeNamePresent) {
-                            lowerLine = lines[++lineCount].toLowerCase();
+                            lowerLine = StringUtils.normalize((lines[++lineCount]));
                             System.out.println(lowerLine);
                             i = i + 1;
                             if ((matchesRelativeLabel(lowerLine, terms.get(i), Label.FATHER_NAME)) || (matchesRelativeLabel(lowerLine, terms.get(i), Label.HUSBAND_NAME) || (matchesRelativeLabel(lowerLine, terms.get(i), Label.MOTHER_NAME)))) {
@@ -478,7 +478,7 @@ public class PDFSearchService {
                         } else if (!relativeNamePresent && nameMatch) {
                             {
                                 List<String> relativeNames = new ArrayList<>();
-                                lowerLine = lines[++lineCount].toLowerCase();
+                                lowerLine = StringUtils.normalize(lines[++lineCount].toLowerCase());
                                 Pattern relativePattern = Pattern.compile(
                                         "(?:Fath[a-z]r|Husband|Moth[a-z]r)\\s*Nam[a-z]*\\s*:\\s*(.*?)(?=\\s*-|(?:Fath[a-z]r|Husband|Moth[a-z]r)\\s*Nam[a-z]*\\s*:|$)",
                                         Pattern.CASE_INSENSITIVE
@@ -524,7 +524,7 @@ public class PDFSearchService {
                     List<String> relativeNames = new ArrayList<>();
                     List<Voter> relativeMatches=new ArrayList<>();
 
-                    lowerLine = lines[lineCount].toLowerCase();
+                    lowerLine = StringUtils.normalize(lines[lineCount]);
                   if ((matchesRelativeLabel(lowerLine, terms.get(i), Label.FATHER_NAME)) || (matchesRelativeLabel(lowerLine, terms.get(i), Label.HUSBAND_NAME) || (matchesRelativeLabel(lowerLine, terms.get(i), Label.MOTHER_NAME)))) {
 
 
@@ -551,7 +551,7 @@ public class PDFSearchService {
                     //Name setting
                     List<String> names = new ArrayList<>();
                     int nameRow=lineCount-1;
-                    lowerLine = lines[nameRow].toLowerCase();
+                    lowerLine = StringUtils.normalize(lines[nameRow]);
                     Pattern pattern = Pattern.compile("Nam[a-z]*\\s*:\\s*(.*?)(?=Nam[a-z]*\\s*:|$)", Pattern.CASE_INSENSITIVE);
                     Matcher matcher = pattern.matcher(lowerLine);
 
@@ -604,7 +604,10 @@ public class PDFSearchService {
 
                         //for (String token : queryText) {
                           String streetName=String.join(" ", queryText);
-                            if (lines[1].toLowerCase().contains(streetName.toLowerCase())) {
+                         String normalizedLine = StringUtils.normalize(lines[1]);
+                         String normalizedStreet = StringUtils.normalize(streetName);
+
+                     if (normalizedLine.contains(normalizedStreet)) {
                         /*Map<String, String> mapResultConstituency = StringUtils.splitStringByKeyIgnoreCase(
                                 lines[0],
                                 ":");

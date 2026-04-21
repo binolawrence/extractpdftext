@@ -5,6 +5,7 @@ import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -567,5 +568,18 @@ public class StringUtils {
         if (idx == -1) return "";
         int start = idx + match.length();
         return input.substring(start).replaceAll("^\\s+", "");
+    }
+
+    @Override
+    public int hashCode() {
+        return super.hashCode();
+    }
+
+    public static String normalize(String input) {
+        return input == null ? "" :
+                input.replaceAll("\\s+", " ")   // collapse spaces
+                        .replace("\u00A0", " ")    // remove NBSP
+                        .trim()
+                        .toLowerCase(Locale.ROOT);
     }
 }
