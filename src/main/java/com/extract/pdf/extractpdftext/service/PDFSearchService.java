@@ -140,11 +140,11 @@ public class PDFSearchService {
             }
 
             // 🔥 Require some ngram overlap (not too strict)
-            if (!ngrams.isEmpty()) {
+         /*   if (!ngrams.isEmpty()) {
                 ngramBuilder.setMinimumNumberShouldMatch(
                         Math.max(1, ngrams.size() / 3)
                 );
-            }
+            }*/
 
             perToken.add(ngramBuilder.build(), BooleanClause.Occur.SHOULD);
 
@@ -153,7 +153,7 @@ public class PDFSearchService {
         }
 
 // 🔥 Require at least some tokens to match
-        builder.setMinimumNumberShouldMatch(Math.max(1, tokens.size() / 2));
+        //builder-.setMinimumNumberShouldMatch(Math.max(1, tokens.size() / 2));
 
         Query finalQuery = builder.build();
 
@@ -169,7 +169,7 @@ public class PDFSearchService {
             String content = d.get("content");
             int page = Integer.parseInt(d.get("pageNumberStored"));
             String fileLocation = d.get("filePath");
-
+            logger.info("Processing search result - File: {}, Page: {}, Score: {}", fileName, page, sd.score);
 
             List<Voter> voters = getMatchingLines(searchCount++,content, searchText, fileName, namePresent,relativeNamePresent, streetNamePresent);
             voters.forEach(v -> {
@@ -394,6 +394,24 @@ public class PDFSearchService {
         Voter voter = null;
 
 
+        if(!namePresent&&!relativeNamePresent&&streetNamePresent) {
+
+            voter = new Voter();
+            //for (String token : queryText) {
+            // String streetName=String.join(" ", queryText);
+            String normalizedStreet = StringUtils.normalize(String.join(" ", queryText));
+            String streetLine=StringUtils.normalize(lines[1]);
+
+            //logger.info("line 2 contains:"+lines[2]);
+            // for (String line : lines) {
+            if (StringUtils.normalize(streetLine).contains(normalizedStreet)) {
+                voter = getStreetAndPollingStationDetails(fileName, voter);
+                voterMatches.add(voter);
+                return voterMatches;
+            }
+            //}
+
+        }
         for (int lineCount = 0; lineCount < lines.length; lineCount++) {
 
             String lowerLine = StringUtils.normalize(lines[lineCount].toLowerCase());
@@ -591,24 +609,7 @@ public class PDFSearchService {
                     }
                 }
             }
-                 if(!namePresent&&!relativeNamePresent&&streetNamePresent) {
-
-                        voter = new Voter();
-                //for (String token : queryText) {
-                     // String streetName=String.join(" ", queryText);
-                     String normalizedStreet = StringUtils.normalize(String.join(" ", queryText));
-                     String streetLine=StringUtils.normalize(lines[1]);
-
-                    //logger.info("line 2 contains:"+lines[2]);
-                    // for (String line : lines) {
-                         if (StringUtils.normalize(streetLine).contains(normalizedStreet)) {
-                             voter = getStreetAndPollingStationDetails(fileName, voter);
-                             voterMatches.add(voter);
-                             return voterMatches;
-                         }
-                     //}
-
-                    }            }
+                        }
 
 
         // Check if all terms are matched
@@ -686,7 +687,6 @@ public class PDFSearchService {
         boolean pollingStationAddressFlagFetching = false;
 
         String[] lines = content.split("\\r?\\n");
-        Arrays.stream(lines).forEach(System.out::println);
         String[] terms = new String[]{"Details of part and polling area", "Polling station details", "Address of Polling Station :", "NUMBER OF ELECTORS"};
         for (String line : lines) {
             if (line.contains(terms[0])) {
